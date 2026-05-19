@@ -1,9 +1,26 @@
 {
-  "short_name": "Action Tracker",
-  "name": "Meeting Action Tracker",
-  "icons": [],
-  "start_url": ".",
+  "name": "Family Wealth",
+  "short_name": "Wealth",
+  "description": "Family wealth management and projections",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "theme_color": "#4F46E5",
-  "background_color": "#F5F7FF"
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance"],
+  "screenshots": []
 }

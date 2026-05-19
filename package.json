@@ -1,23 +1,36 @@
 {
-  "name": "meeting-action-tracker",
+  "name": "family-wealth-app",
   "version": "1.0.0",
   "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1"
-  },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "eslintConfig": {
-    "extends": ["react-app"]
+  "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
+    "@supabase/ssr": "^0.4.0",
+    "@supabase/supabase-js": "^2.43.4",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "lucide-react": "^0.400.0",
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7",
+    "swr": "^2.2.5",
+    "zod": "^3.23.8"
   },
-  "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^8",
+    "eslint-config-next": "^14.2.5",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5"
   }
 }
