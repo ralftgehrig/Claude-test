@@ -150,12 +150,12 @@ export async function GET(req: NextRequest) {
   const errors: string[] = [];
 
   // ── 1. Resolve family members ──────────────────────────────────────────────
-  const { data: members, error: membersError } = await supabase.from('family_members').select('id, name, user_id');
+  const { data: members, error: membersError } = await supabase.from('family_members').select('id, name');
   if (membersError) {
     return NextResponse.json({ error: 'DB error fetching family_members', detail: membersError.message }, { status: 500 });
   }
   if (!members || members.length === 0) {
-    return NextResponse.json({ error: 'family_members table is empty or inaccessible', members }, { status: 500 });
+    return NextResponse.json({ error: 'family_members table is empty or inaccessible' }, { status: 500 });
   }
   const ralf = members.find(m => m.name.toLowerCase() === 'ralf');
   const shannon = members.find(m => m.name.toLowerCase() === 'shannon');
@@ -165,7 +165,6 @@ export async function GET(req: NextRequest) {
       found_names: members.map(m => m.name),
     }, { status: 500 });
   }
-  const userId = ralf.user_id;
   log.push(`✓ Ralf: ${ralf.id}  Shannon: ${shannon.id}`);
 
   const memberIdFor = (owner: string) => owner === 'ralf' ? ralf.id : shannon.id;
@@ -220,7 +219,6 @@ export async function GET(req: NextRequest) {
       log.push(`↩ Already exists: ${acct.name}/${acct.owner}`);
     } else {
       const insert: Record<string, unknown> = {
-        user_id: userId,
         family_member_id: memberId,
         name: acct.name,
         account_type: acct.type,
