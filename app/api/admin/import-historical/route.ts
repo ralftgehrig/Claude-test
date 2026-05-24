@@ -19,14 +19,14 @@ const DATA: Record<string, { snaps: Snap[]; cur?: string }> = {
     { d: '2024-12-31', b: 21612.74 }, { d: '2025-07-15', b: 21000 }, { d: '2025-12-31', b: 24000 },
   ]},
   // ── Vanguard SIPP ──────────────────────────────────────────────────────────
-  'SIPP|Vanguard|ralf': { snaps: [
+  'Pension|Vanguard|ralf': { snaps: [
     { d: '2021-07-01', b: 20750 }, { d: '2021-12-01', b: 98560 }, { d: '2022-11-05', b: 86766 },
     { d: '2022-12-30', b: 84548.75 }, { d: '2023-08-08', b: 106700 }, { d: '2023-12-30', b: 113700 },
     { d: '2024-06-18', b: 146868 }, { d: '2024-12-31', b: 158663 }, { d: '2025-07-15', b: 231800 },
     { d: '2025-12-31', b: 256600 },
   ]},
   // ── Aviva SIPP ────────────────────────────────────────────────────────────
-  'SIPP|Aviva|ralf': { snaps: [
+  'Pension|Aviva|ralf': { snaps: [
     { d: '2021-12-01', b: 1200 }, { d: '2022-11-05', b: 13000 }, { d: '2022-12-30', b: 14886.71 },
     { d: '2023-08-08', b: 26060 }, { d: '2023-12-30', b: 32200 }, { d: '2024-06-18', b: 43476 },
     { d: '2024-12-31', b: 56865 }, { d: '2025-07-15', b: 12000 }, { d: '2025-12-31', b: 25000 },
@@ -189,10 +189,6 @@ export async function GET(req: NextRequest) {
   };
 
   // ── 3. Process existing accounts ───────────────────────────────────────────
-  // Debug: dump all of Ralf's accounts to diagnose SIPP lookup
-  const { data: ralfAccounts } = await supabase.from('accounts').select('id, name, provider, account_type').eq('family_member_id', ralf.id);
-  log.push('Ralf accounts: ' + JSON.stringify(ralfAccounts?.map(a => `${a.name}|${a.provider}|${a.account_type}`)));
-
   for (const [key, { snaps, cur }] of Object.entries(DATA)) {
     const [name, provider, owner] = key.split('|');
     const memberId = memberIdFor(owner);
