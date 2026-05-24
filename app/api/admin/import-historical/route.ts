@@ -150,11 +150,20 @@ export async function GET(req: NextRequest) {
   const errors: string[] = [];
 
   // ── 1. Resolve family members ──────────────────────────────────────────────
-  const { data: members } = await supabase.from('family_members').select('id, name, user_id');
-  const ralf = members?.find(m => m.name.toLowerCase() === 'ralf');
-  const shannon = members?.find(m => m.name.toLowerCase() === 'shannon');
+  const { data: members, error: membersError } = await supabase.from('family_members').select('id, name, user_id');
+  if (membersError) {
+    return NextResponse.json({ error: 'DB error fetching family_members', detail: membersError.message }, { status: 500 });
+  }
+  if (!members || members.length === 0) {
+    return NextResponse.json({ error: 'family_members table is empty or inaccessible', members }, { status: 500 });
+  }
+  const ralf = members.find(m => m.name.toLowerCase() === 'ralf');
+  const shannon = members.find(m => m.name.toLowerCase() === 'shannon');
   if (!ralf || !shannon) {
-    return NextResponse.json({ error: 'Could not find family members Ralf / Shannon in DB' }, { status: 500 });
+    return NextResponse.json({
+      error: 'Could not find family members Ralf / Shannon in DB',
+      found_names: members.map(m => m.name),
+    }, { status: 500 });
   }
   const userId = ralf.user_id;
   log.push(`✓ Ralf: ${ralf.id}  Shannon: ${shannon.id}`);
