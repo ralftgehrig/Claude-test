@@ -1,6 +1,6 @@
 // ─── Domain types ────────────────────────────────────────────────────────────
 
-export type Currency = 'GBP' | 'USD' | 'EUR' | 'CHF' | 'JPY' | 'AUD' | 'CAD' | 'INR';
+export type Currency = 'GBP' | 'USD' | 'EUR' | 'CHF' | 'JPY' | 'AUD' | 'CAD' | 'INR' | 'SGD';
 
 export type Relationship = 'self' | 'spouse' | 'child';
 
@@ -284,7 +284,7 @@ export const INCOME_TYPE_LABELS: Record<IncomeType, string> = {
   other: 'Other',
 };
 
-export const CURRENCIES: Currency[] = ['GBP', 'USD', 'EUR', 'CHF', 'JPY', 'AUD', 'CAD', 'INR'];
+export const CURRENCIES: Currency[] = ['GBP', 'USD', 'EUR', 'CHF', 'JPY', 'AUD', 'CAD', 'INR', 'SGD'];
 
 export const MEMBER_COLORS = [
   '#3b82f6',

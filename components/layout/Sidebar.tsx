@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useDisplayCurrency } from '@/lib/display-currency';
+import type { Currency } from '@/lib/types';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -27,6 +29,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { currency, setCurrency, displayCurrencies } = useDisplayCurrency();
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -74,6 +77,27 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Currency switcher */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        <p className="text-xs text-gray-400 mb-2">Display currency</p>
+        <div className="flex flex-wrap gap-1">
+          {displayCurrencies.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCurrency(c as Currency)}
+              className={cn(
+                'px-2 py-1 rounded-lg text-xs font-semibold transition-colors',
+                currency === c
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              )}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Sign out */}
       <div className="px-3 py-4 border-t border-gray-100">

@@ -43,6 +43,7 @@ export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   AUD: 'A$',
   CAD: 'C$',
   INR: '₹',
+  SGD: 'S$',
 };
 
 export const CURRENCY_FLAGS: Record<Currency, string> = {
@@ -54,4 +55,5 @@ export const CURRENCY_FLAGS: Record<Currency, string> = {
   AUD: '🇦🇺',
   CAD: '🇨🇦',
   INR: '🇮🇳',
+  SGD: '🇸🇬',
 };

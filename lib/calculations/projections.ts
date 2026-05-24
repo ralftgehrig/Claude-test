@@ -140,7 +140,7 @@ export function runProjection(
         events: getEvents(y),
       });
     }
-    return { data, milestones: computeMilestones(data) };
+    return { data, milestones: computeMilestones(data, portfolio.totalGBP) };
   }
 
   // Deterministic
@@ -152,14 +152,15 @@ export function runProjection(
     events: getEvents(i + 1),
   }));
 
-  return { data, milestones: computeMilestones(data) };
+  return { data, milestones: computeMilestones(data, portfolio.totalGBP) };
 }
 
-function computeMilestones(data: ProjectionDataPoint[]) {
+function computeMilestones(data: ProjectionDataPoint[], currentNetWorth: number) {
   const targets = [500_000, 1_000_000, 2_000_000, 5_000_000];
   const milestones: ProjectionResult['milestones'] = [];
 
   for (const target of targets) {
+    if (target <= currentNetWorth) continue; // already achieved
     const hit = data.find((d) => d.netWorth >= target);
     if (hit) {
       milestones.push({
