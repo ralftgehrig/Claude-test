@@ -6,19 +6,33 @@ import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Lightbulb } from 'lucid
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { href: '/accounts', icon: Wallet, label: 'Accounts' },
-  { href: '/income', icon: TrendingUp, label: 'Income' },
-  { href: '/projections', icon: BarChart3, label: 'Project' },
-  { href: '/insights', icon: Lightbulb, label: 'Insights' },
+  { href: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
+  { href: '/accounts',    icon: Wallet,           label: 'Accounts' },
+  { href: '/income',      icon: TrendingUp,       label: 'Income' },
+  { href: '/projections', icon: BarChart3,        label: 'Forecast' },
+  { href: '/insights',    icon: Lightbulb,        label: 'Insights' },
 ];
 
 export default function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-100 pb-safe">
-      <div className="flex items-stretch">
+    <nav
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 px-4"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)' }}
+    >
+      {/* Floating pill */}
+      <div
+        className="flex items-center justify-around px-2 py-1.5"
+        style={{
+          background: 'rgba(255, 255, 255, 0.82)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          borderRadius: 28,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.14), 0 1px 0 rgba(255,255,255,0.6) inset, 0 -0.5px 0 rgba(0,0,0,0.08)',
+          border: '0.5px solid rgba(255,255,255,0.5)',
+        }}
+      >
         {navItems.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
@@ -26,12 +40,31 @@ export default function MobileNav() {
               key={href}
               href={href}
               className={cn(
-                'flex-1 flex flex-col items-center gap-1 pt-2 pb-2 text-xs font-medium transition-colors',
-                active ? 'text-primary-600' : 'text-gray-400'
+                'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all duration-150',
+                active ? 'opacity-100' : 'opacity-50 active:opacity-75'
               )}
             >
-              <Icon className={cn('w-5 h-5', active && 'text-primary-600')} />
-              <span>{label}</span>
+              <div
+                className={cn(
+                  'w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-150',
+                  active && 'bg-[#007AFF]/10'
+                )}
+              >
+                <Icon
+                  className="w-[22px] h-[22px]"
+                  style={{ color: active ? '#007AFF' : '#3C3C43' }}
+                  strokeWidth={active ? 2.2 : 1.8}
+                />
+              </div>
+              <span
+                className="text-[10px] font-semibold tracking-tight"
+                style={{
+                  color: active ? '#007AFF' : '#3C3C43',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+                }}
+              >
+                {label}
+              </span>
             </Link>
           );
         })}

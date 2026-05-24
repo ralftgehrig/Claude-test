@@ -5,116 +5,155 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    /* iOS systemGroupedBackground */
+    background-color: #F2F2F7;
+    color: #1C1C1E;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
   }
 
-  /* Smooth scrolling */
   * {
     scroll-behavior: smooth;
+  }
+
+  /* iOS-style focus rings */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.35);
   }
 }
 
 @layer components {
+
+  /* ── Cards ── */
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-5;
+    @apply bg-white p-5;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   .card-title {
-    @apply text-sm font-medium text-gray-500 mb-1;
+    @apply text-xs font-semibold uppercase tracking-wide mb-2;
+    color: #8E8E93; /* iOS secondaryLabel */
+    letter-spacing: 0.04em;
   }
 
+  /* ── Buttons ── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5
-           text-sm font-medium transition-all duration-150 disabled:opacity-50
-           disabled:cursor-not-allowed focus-visible:outline-none
-           focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           text-[15px] font-semibold transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed
+           focus-visible:outline-none active:scale-[0.97];
+    border-radius: 12px;
+    letter-spacing: -0.01em;
   }
 
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
+    @apply btn text-white;
+    background: #007AFF;
   }
+  .btn-primary:hover { background: #0071E8; }
+  .btn-primary:active { background: #0064CF; }
 
   .btn-secondary {
-    @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300;
+    @apply btn;
+    background: rgba(118, 118, 128, 0.12);
+    color: #007AFF;
   }
+  .btn-secondary:hover { background: rgba(118, 118, 128, 0.18); }
 
   .btn-danger {
-    @apply btn bg-red-50 text-red-600 hover:bg-red-100 active:bg-red-200;
+    @apply btn;
+    background: rgba(255, 59, 48, 0.1);
+    color: #FF3B30;
   }
+  .btn-danger:hover { background: rgba(255, 59, 48, 0.16); }
 
   .btn-ghost {
-    @apply btn text-gray-600 hover:bg-gray-100;
+    @apply btn;
+    background: transparent;
+    color: #8E8E93;
   }
+  .btn-ghost:hover { background: rgba(118, 118, 128, 0.1); }
 
+  /* ── Inputs ── */
   .input {
-    @apply w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5
-           text-sm placeholder:text-gray-400
-           focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20
-           transition-colors;
+    @apply w-full px-3 py-2.5 text-[15px] transition-colors;
+    background: rgba(118, 118, 128, 0.12);
+    border: none;
+    border-radius: 10px;
+    color: #1C1C1E;
+  }
+  .input::placeholder { color: #C7C7CC; }
+  .input:focus {
+    outline: none;
+    background: rgba(118, 118, 128, 0.16);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.25);
+  }
+  /* Safari date input fix */
+  .input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.4;
   }
 
+  /* ── Labels ── */
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-[13px] font-medium mb-1;
+    color: #8E8E93;
   }
 
+  /* ── Badges ── */
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold;
+    border-radius: 6px;
   }
+  .badge-blue   { @apply badge; background: rgba(0,122,255,0.12); color: #007AFF; }
+  .badge-green  { @apply badge; background: rgba(52,199,89,0.12); color: #34C759; }
+  .badge-amber  { @apply badge; background: rgba(255,159,10,0.12); color: #FF9500; }
+  .badge-red    { @apply badge; background: rgba(255,59,48,0.12); color: #FF3B30; }
+  .badge-purple { @apply badge; background: rgba(175,82,222,0.12); color: #AF52DE; }
+  .badge-gray   { @apply badge; background: rgba(118,118,128,0.12); color: #636366; }
 
-  .badge-blue {
-    @apply badge bg-blue-50 text-blue-700;
-  }
+  /* ── Positive/Negative ── */
+  .text-positive { color: #34C759; }
+  .text-negative { color: #FF3B30; }
 
-  .badge-green {
-    @apply badge bg-green-50 text-green-700;
-  }
-
-  .badge-amber {
-    @apply badge bg-amber-50 text-amber-700;
-  }
-
-  .badge-red {
-    @apply badge bg-red-50 text-red-700;
-  }
-
-  .badge-purple {
-    @apply badge bg-purple-50 text-purple-700;
-  }
-
-  .badge-gray {
-    @apply badge bg-gray-100 text-gray-600;
-  }
-
-  /* Positive/negative color utilities */
-  .text-positive {
-    @apply text-green-600;
-  }
-
-  .text-negative {
-    @apply text-red-500;
+  /* ── iOS list separator ── */
+  .ios-separator {
+    border-bottom: 0.5px solid rgba(60, 60, 67, 0.18);
   }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
+/* ── Custom scrollbar (macOS/desktop) ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
 
-/* Bottom nav safe area on iPhone */
+/* ── Safe area helpers ── */
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+.pb-nav-safe {
+  /* Content bottom padding: floating nav height + margin + safe area */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Fade/slide animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-fade-in  { animation: fadeIn  0.18s ease-out; }
+.animate-slide-up { animation: slideUp 0.22s ease-out; }
+.animate-sheet-up { animation: sheetUp 0.32s cubic-bezier(0.32, 0.72, 0, 1); }

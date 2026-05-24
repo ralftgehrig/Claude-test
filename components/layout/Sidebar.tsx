@@ -10,7 +10,6 @@ import {
   Lightbulb,
   Settings,
   LogOut,
-  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -18,12 +17,12 @@ import { useDisplayCurrency } from '@/lib/display-currency';
 import type { Currency } from '@/lib/types';
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/accounts', icon: Wallet, label: 'Accounts' },
-  { href: '/income', icon: TrendingUp, label: 'Income' },
-  { href: '/projections', icon: BarChart3, label: 'Projections' },
-  { href: '/insights', icon: Lightbulb, label: 'Insights' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/accounts',    icon: Wallet,           label: 'Accounts' },
+  { href: '/income',      icon: TrendingUp,       label: 'Income' },
+  { href: '/projections', icon: BarChart3,        label: 'Projections' },
+  { href: '/insights',    icon: Lightbulb,        label: 'Insights' },
+  { href: '/settings',    icon: Settings,         label: 'Settings' },
 ];
 
 export default function Sidebar() {
@@ -38,20 +37,31 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex flex-col w-60 min-h-screen bg-white border-r border-gray-100 fixed left-0 top-0 bottom-0 z-20">
+    <aside
+      className="hidden lg:flex flex-col w-60 min-h-screen fixed left-0 top-0 bottom-0 z-20"
+      style={{
+        background: 'rgba(255,255,255,0.72)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderRight: '0.5px solid rgba(60,60,67,0.12)',
+      }}
+    >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-6 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
-          <TrendingUp className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-3 px-5 py-6" style={{ borderBottom: '0.5px solid rgba(60,60,67,0.12)' }}>
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: '#007AFF' }}
+        >
+          <TrendingUp className="w-5 h-5 text-white" strokeWidth={2} />
         </div>
         <div>
-          <p className="text-sm font-bold text-gray-900">Family Wealth</p>
-          <p className="text-xs text-gray-400">Dashboard</p>
+          <p className="text-[15px] font-semibold" style={{ color: '#1C1C1E', letterSpacing: '-0.02em' }}>Family Wealth</p>
+          <p className="text-[11px]" style={{ color: '#8E8E93' }}>Dashboard</p>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
@@ -59,39 +69,36 @@ export default function Sidebar() {
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group',
-                active
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all',
+                active ? 'text-[#007AFF]' : 'text-[#3C3C43] hover:text-[#1C1C1E]'
               )}
+              style={active ? { background: 'rgba(0,122,255,0.1)' } : {}}
             >
               <Icon
-                className={cn(
-                  'w-5 h-5 flex-shrink-0',
-                  active ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-600'
-                )}
+                className={cn('w-[18px] h-[18px] flex-shrink-0')}
+                strokeWidth={active ? 2.2 : 1.8}
+                style={{ color: active ? '#007AFF' : '#8E8E93' }}
               />
               <span className="flex-1">{label}</span>
-              {active && <ChevronRight className="w-3.5 h-3.5 text-primary-400" />}
             </Link>
           );
         })}
       </nav>
 
       {/* Currency switcher */}
-      <div className="px-4 py-3 border-t border-gray-100">
-        <p className="text-xs text-gray-400 mb-2">Display currency</p>
+      <div className="px-4 py-3" style={{ borderTop: '0.5px solid rgba(60,60,67,0.12)' }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#8E8E93' }}>Display currency</p>
         <div className="flex flex-wrap gap-1">
           {displayCurrencies.map((c) => (
             <button
               key={c}
               onClick={() => setCurrency(c as Currency)}
-              className={cn(
-                'px-2 py-1 rounded-lg text-xs font-semibold transition-colors',
+              className="px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors"
+              style={
                 currency === c
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              )}
+                  ? { background: '#007AFF', color: '#fff' }
+                  : { background: 'rgba(118,118,128,0.12)', color: '#636366' }
+              }
             >
               {c}
             </button>
@@ -100,12 +107,13 @@ export default function Sidebar() {
       </div>
 
       {/* Sign out */}
-      <div className="px-3 py-4 border-t border-gray-100">
+      <div className="px-3 py-4" style={{ borderTop: '0.5px solid rgba(60,60,67,0.12)' }}>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors w-full"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-colors w-full"
+          style={{ color: '#FF3B30' }}
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-[18px] h-[18px]" strokeWidth={1.8} />
           Sign out
         </button>
       </div>
