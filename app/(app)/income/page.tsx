@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { Plus, TrendingUp, Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, TrendingUp, Calendar, CheckCircle2, Clock, Edit2, Trash2, DollarSign } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import IncomeSourceForm from '@/components/income/IncomeSourceForm';
+import PerformancePaymentForm from '@/components/income/PerformancePaymentForm';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatCurrency, formatDate, groupBy } from '@/lib/utils';
 import { INCOME_TYPE_LABELS } from '@/lib/types';
@@ -20,16 +21,36 @@ const FREQUENCY_LABELS: Record<string, string> = {
   on_vesting: 'on vesting',
 };
 
+interface IncomePayment {
+  id: string;
+  income_source_id: string;
+  payment_date: string;
+  target_amount: number | null;
+  actual_amount: number;
+  currency: string;
+  notes: string | null;
+}
+
 export default function IncomePage() {
   const { data: incomeSources = [] } = useSWR<IncomeSource[]>('/api/income', fetcher);
   const { data: members = [] } = useSWR<FamilyMember[]>('/api/family-members', fetcher);
   const { data: upcomingVests = [] } = useSWR<VestingEvent[]>('/api/vesting?upcoming=true', fetcher);
+  const { data: allPayments = [] } = useSWR<IncomePayment[]>('/api/income-payments', fetcher);
 
   const [showAdd, setShowAdd] = useState(false);
+  const [editingSource, setEditingSource] = useState<IncomeSource | null>(null);
+  const [recordingPayment, setRecordingPayment] = useState<IncomeSource | null>(null);
   const [markingVest, setMarkingVest] = useState<VestingEvent | null>(null);
   const [vestActual, setVestActual] = useState({ actual_value: '', tax_withheld: '' });
 
   const memberMap = Object.fromEntries(members.map((m) => [m.id, m]));
+
+  // Payments grouped by income source
+  const paymentsBySource: Record<string, IncomePayment[]> = {};
+  for (const p of allPayments) {
+    if (!paymentsBySource[p.income_source_id]) paymentsBySource[p.income_source_id] = [];
+    paymentsBySource[p.income_source_id].push(p);
+  }
 
   const handleAddIncome = async (data: Record<string, unknown>) => {
     await fetch('/api/income', {
@@ -40,6 +61,36 @@ export default function IncomePage() {
     await mutate('/api/income');
     await mutate('/api/vesting?upcoming=true');
     setShowAdd(false);
+  };
+
+  const handleEditIncome = async (data: Record<string, unknown>) => {
+    if (!editingSource) return;
+    await fetch(`/api/income/${editingSource.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    await mutate('/api/income');
+    await mutate('/api/vesting?upcoming=true');
+    setEditingSource(null);
+  };
+
+  const handleDeleteIncome = async (src: IncomeSource) => {
+    if (!confirm(`Delete "${src.name}"? All associated data will also be deleted.`)) return;
+    await fetch(`/api/income/${src.id}`, { method: 'DELETE' });
+    await mutate('/api/income');
+    await mutate('/api/vesting?upcoming=true');
+    await mutate('/api/income-payments');
+  };
+
+  const handleRecordPayment = async (data: Record<string, unknown>) => {
+    await fetch('/api/income-payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    await mutate('/api/income-payments');
+    setRecordingPayment(null);
   };
 
   const handleMarkVested = async (e: React.FormEvent) => {
@@ -68,7 +119,7 @@ export default function IncomePage() {
   const annualByMember: Record<string, number> = {};
   for (const src of incomeSources) {
     if (!src.is_active || !src.gross_amount) continue;
-    const gbp = src.currency === 'GBP' ? src.gross_amount : src.gross_amount; // simplified
+    const gbp = src.gross_amount; // simplified
     const annual =
       src.frequency === 'monthly' ? gbp * 12
         : src.frequency === 'quarterly' ? gbp * 4
@@ -88,6 +139,9 @@ export default function IncomePage() {
   );
 
   const byMember = groupBy(incomeSources, (s) => s.family_member_id);
+
+  // Types that support performance payments
+  const PERFORMANCE_TYPES = new Set(['bonus', 'salary', 'freelance', 'rental', 'dividend', 'other']);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -144,7 +198,13 @@ export default function IncomePage() {
                     )}
                     <button
                       className="text-xs text-primary-600 hover:text-primary-700 font-medium mt-0.5"
-                      onClick={() => { setMarkingVest(vest); setVestActual({ actual_value: vest.total_estimated_value?.toString() ?? '', tax_withheld: '' }); }}
+                      onClick={() => {
+                        setMarkingVest(vest);
+                        setVestActual({
+                          actual_value: vest.total_estimated_value?.toString() ?? '',
+                          tax_withheld: '',
+                        });
+                      }}
                     >
                       Mark vested
                     </button>
@@ -195,29 +255,91 @@ export default function IncomePage() {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               {sources.map((src) => {
                 const vestCount = src.vesting_events?.filter((v) => !v.is_vested).length ?? 0;
+                const sourcePayments = (paymentsBySource[src.id] ?? []).slice(0, 3);
+                const canRecordPayment = PERFORMANCE_TYPES.has(src.income_type);
+
                 return (
-                  <div key={src.id} className="flex items-start gap-3 p-3 rounded-xl border border-gray-100">
-                    <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${src.is_active ? 'bg-green-400' : 'bg-gray-300'}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-gray-900">{src.name}</p>
-                        <span className="badge badge-blue">
-                          {INCOME_TYPE_LABELS[src.income_type]}
-                        </span>
-                        {vestCount > 0 && (
-                          <span className="badge badge-amber">{vestCount} vests pending</span>
+                  <div key={src.id} className="border border-gray-100 rounded-xl p-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${src.is_active ? 'bg-green-400' : 'bg-gray-300'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-gray-900">{src.name}</p>
+                          <span className="badge badge-blue">
+                            {INCOME_TYPE_LABELS[src.income_type]}
+                          </span>
+                          {vestCount > 0 && (
+                            <span className="badge badge-amber">{vestCount} vests pending</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {src.employer && `${src.employer} · `}
+                          {src.gross_amount
+                            ? `${formatCurrency(src.gross_amount, src.currency)} ${FREQUENCY_LABELS[src.frequency ?? 'monthly']}`
+                            : 'See vesting schedule'}
+                          {src.start_date && ` · from ${formatDate(src.start_date, 'MMM yyyy')}`}
+                        </p>
+
+                        {/* Recent performance payments */}
+                        {sourcePayments.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {sourcePayments.map((p) => {
+                              const pct = p.target_amount
+                                ? Math.round((p.actual_amount / p.target_amount) * 100)
+                                : null;
+                              return (
+                                <div key={p.id} className="flex items-center gap-2 text-xs text-gray-500">
+                                  <DollarSign className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                  <span>{formatDate(p.payment_date, 'd MMM yyyy')}</span>
+                                  <span className="font-medium text-gray-700">
+                                    {formatCurrency(p.actual_amount, p.currency as never)}
+                                  </span>
+                                  {p.target_amount && (
+                                    <span className="text-gray-400">
+                                      of {formatCurrency(p.target_amount, p.currency as never)}
+                                    </span>
+                                  )}
+                                  {pct !== null && (
+                                    <span className={`font-medium ${pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-amber-600' : 'text-red-500'}`}>
+                                      ({pct}%)
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {src.employer && `${src.employer} · `}
-                        {src.gross_amount
-                          ? `${formatCurrency(src.gross_amount, src.currency)} ${FREQUENCY_LABELS[src.frequency ?? 'monthly']}`
-                          : 'See vesting schedule'}
-                        {src.start_date && ` · from ${formatDate(src.start_date, 'MMM yyyy')}`}
-                      </p>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-1 flex-shrink-0">
+                        {canRecordPayment && (
+                          <button
+                            className="btn-ghost p-1.5 text-gray-400 hover:text-green-600"
+                            title="Record payment"
+                            onClick={() => setRecordingPayment(src)}
+                          >
+                            <DollarSign className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          className="btn-ghost p-1.5 text-gray-400 hover:text-gray-700"
+                          title="Edit income source"
+                          onClick={() => setEditingSource(src)}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          className="btn-ghost p-1.5 text-gray-400 hover:text-red-500"
+                          title="Delete income source"
+                          onClick={() => handleDeleteIncome(src)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -232,6 +354,27 @@ export default function IncomePage() {
         <IncomeSourceForm members={members} onSubmit={handleAddIncome} onCancel={() => setShowAdd(false)} />
       </Modal>
 
+      <Modal open={!!editingSource} onClose={() => setEditingSource(null)} title={`Edit — ${editingSource?.name}`} size="lg">
+        {editingSource && (
+          <IncomeSourceForm
+            members={members}
+            source={editingSource}
+            onSubmit={handleEditIncome}
+            onCancel={() => setEditingSource(null)}
+          />
+        )}
+      </Modal>
+
+      <Modal open={!!recordingPayment} onClose={() => setRecordingPayment(null)} title="Record payment">
+        {recordingPayment && (
+          <PerformancePaymentForm
+            source={recordingPayment}
+            onSubmit={handleRecordPayment}
+            onCancel={() => setRecordingPayment(null)}
+          />
+        )}
+      </Modal>
+
       <Modal open={!!markingVest} onClose={() => setMarkingVest(null)} title="Mark as vested">
         {markingVest && (
           <form onSubmit={handleMarkVested} className="space-y-4">
@@ -241,22 +384,39 @@ export default function IncomePage() {
             </div>
             <div>
               <label className="label">Actual total value ({markingVest.currency})</label>
-              <input className="input" type="number" step="0.01" value={vestActual.actual_value} onChange={(e) => setVestActual((p) => ({ ...p, actual_value: e.target.value }))} required />
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                value={vestActual.actual_value}
+                onChange={(e) => setVestActual((p) => ({ ...p, actual_value: e.target.value }))}
+                required
+              />
             </div>
             <div>
               <label className="label">Tax withheld ({markingVest.currency})</label>
-              <input className="input" type="number" step="0.01" value={vestActual.tax_withheld} onChange={(e) => setVestActual((p) => ({ ...p, tax_withheld: e.target.value }))} placeholder="0" />
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                value={vestActual.tax_withheld}
+                onChange={(e) => setVestActual((p) => ({ ...p, tax_withheld: e.target.value }))}
+                placeholder="0"
+              />
             </div>
             {vestActual.actual_value && (
               <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
-                Net proceeds: {formatCurrency(
+                Net proceeds:{' '}
+                {formatCurrency(
                   parseFloat(vestActual.actual_value) - (parseFloat(vestActual.tax_withheld) || 0),
                   markingVest.currency
                 )}
               </p>
             )}
             <div className="flex gap-2">
-              <button type="button" className="btn-secondary flex-1" onClick={() => setMarkingVest(null)}>Cancel</button>
+              <button type="button" className="btn-secondary flex-1" onClick={() => setMarkingVest(null)}>
+                Cancel
+              </button>
               <button type="submit" className="btn-primary flex-1">
                 <CheckCircle2 className="w-4 h-4" /> Mark vested
               </button>

@@ -39,6 +39,10 @@ export default function ProjectionsPage() {
   const [showNewScenario, setShowNewScenario] = useState(false);
   const [newScenarioName, setNewScenarioName] = useState('');
 
+  // FIRE state
+  const [fireMonthlySpend, setFireMonthlySpend] = useState(4000);
+  const [fireRate, setFireRate] = useState(4);
+
   const baseline = scenarios.find((s) => s.is_baseline);
   const selected = scenarios.find((s) => s.id === selectedScenarioId) ?? baseline ?? scenarios[0];
 
@@ -85,6 +89,16 @@ export default function ProjectionsPage() {
     }).filter(Boolean) as { name: string; data: ProjectionResult; color: string }[];
     setCompareResults(results);
   }, [compareIds, portfolio, scenarios]);
+
+  // FIRE calculations
+  const fireNumber = (fireMonthlySpend * 12) / (fireRate / 100);
+
+  const fireResult = useMemo(() => {
+    if (!projResult) return null;
+    const hit = projResult.data.find((d) => d.netWorth >= fireNumber);
+    if (hit) return { achieved: true, year: hit.year, age: hit.age, netWorth: hit.netWorth };
+    return { achieved: false };
+  }, [projResult, fireNumber]);
 
   const handleSaveAssumptions = async () => {
     if (!selected || !editingAssumptions) return;
@@ -210,14 +224,16 @@ export default function ProjectionsPage() {
 
           {/* Milestones */}
           {projResult.milestones.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {projResult.milestones.map((m) => (
-                <div key={m.label} className="flex items-center gap-2 bg-green-50 rounded-xl px-3 py-2">
-                  <Target className="w-3.5 h-3.5 text-green-600" />
-                  <span className="text-xs font-semibold text-green-700">{m.label}</span>
-                  <span className="text-xs text-green-600">in {m.year} years (age {m.age})</span>
-                </div>
-              ))}
+            <div className="mt-4 border-t border-gray-50 pt-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Wealth milestones (based on this scenario)</p>
+              <div className="flex flex-wrap gap-2">
+                {projResult.milestones.map((m) => (
+                  <div key={m.label} className="bg-green-50 border border-green-100 rounded-xl px-3 py-2 text-xs">
+                    <span className="font-bold text-green-700">{m.label} net worth</span>
+                    <span className="text-green-600"> reached in year {m.year} — when you are age {m.age}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -382,6 +398,151 @@ export default function ProjectionsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* FIRE Calculator */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <p className="text-sm font-semibold text-gray-900">FIRE Calculator</p>
+          <span className="badge badge-purple">Financial Independence</span>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          FIRE = Financial Independence, Retire Early. Based on your projected net worth, this shows when your investments could generate enough to live on without working — using the safe withdrawal rate.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="label">Monthly spending in retirement (£)</label>
+            <input className="input" type="number" value={fireMonthlySpend} onChange={(e) => setFireMonthlySpend(parseInt(e.target.value))} />
+          </div>
+          <div>
+            <label className="label">Safe withdrawal rate (%/year)</label>
+            <input className="input" type="number" step="0.1" value={fireRate} onChange={(e) => setFireRate(parseFloat(e.target.value))} />
+          </div>
+          <div className="flex flex-col justify-end">
+            <p className="label">Your FIRE number</p>
+            <p className="text-xl font-bold text-purple-700">{formatCurrency(fireNumber)}</p>
+            <p className="text-xs text-gray-400">{formatCurrency(fireMonthlySpend * 12)}/year ÷ {fireRate}%</p>
+          </div>
+        </div>
+        {fireResult && (
+          <div className={`rounded-xl p-4 ${fireResult.achieved ? 'bg-green-50 border border-green-100' : 'bg-purple-50 border border-purple-100'}`}>
+            {fireResult.achieved ? (
+              <div>
+                <p className="text-sm font-bold text-green-700">FIRE achieved in year {fireResult.year} — at age {fireResult.age}</p>
+                <p className="text-xs text-green-600 mt-1">Your projected net worth of {formatCurrency(fireResult.netWorth ?? 0)} exceeds your FIRE number of {formatCurrency(fireNumber)}.</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-bold text-purple-700">FIRE not reached within {selected?.assumptions.horizon_years} years on this scenario</p>
+                <p className="text-xs text-purple-600 mt-1">Projected net worth in year {projResult?.data[projResult.data.length - 1]?.year}: {formatCurrency(projResult?.data[projResult.data.length - 1]?.netWorth ?? 0)} vs FIRE number: {formatCurrency(fireNumber)}. Extend the horizon or increase savings rate.</p>
+                <div className="mt-2 h-2 bg-purple-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, ((projResult?.data[projResult.data.length - 1]?.netWorth ?? 0) / fireNumber) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-purple-500 mt-1">{Math.min(100, Math.round(((projResult?.data[projResult.data.length - 1]?.netWorth ?? 0) / fireNumber) * 100))}% of FIRE number at end of projection</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Per-person projections */}
+      {members.length > 0 && (
+        <div className="card">
+          <p className="text-sm font-semibold text-gray-900 mb-4">Individual projections</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {members.map((member) => {
+              const memberAccounts = accounts.filter((a) => a.family_member_id === member.id && a.is_active);
+              const memberTotal = memberAccounts.reduce((sum, a) => {
+                const snap = a.latest_snapshot as BalanceSnapshot | null;
+                if (!snap) return sum;
+                return sum + (a.is_liability ? -snap.gbp_balance : snap.gbp_balance);
+              }, 0);
+
+              if (memberTotal <= 0) return null;
+
+              const age = member.date_of_birth
+                ? new Date().getFullYear() - new Date(member.date_of_birth).getFullYear()
+                : null;
+              const isChild = member.relationship === 'child';
+              const yearsTo18 = isChild && age !== null ? Math.max(0, 18 - age) : null;
+
+              // Compute per-member category breakdown
+              const byCategory: Partial<Record<AssetCategory, number>> = {};
+              for (const a of memberAccounts) {
+                const snap = a.latest_snapshot as BalanceSnapshot | null;
+                if (!snap) continue;
+                const cat = ACCOUNT_CATEGORY[a.account_type] ?? 'cash';
+                const val = a.is_liability ? -snap.gbp_balance : snap.gbp_balance;
+                byCategory[cat] = (byCategory[cat] ?? 0) + val;
+              }
+
+              const horizonYears = isChild && yearsTo18 ? yearsTo18 : 20;
+
+              const memberProjection = selected
+                ? runProjection(
+                    {
+                      byCategory,
+                      totalGBP: memberTotal,
+                      selfDobYear: member.date_of_birth
+                        ? new Date(member.date_of_birth).getFullYear()
+                        : undefined,
+                    },
+                    {
+                      ...selected.assumptions,
+                      monthly_net_savings: 0,
+                      horizon_years: horizonYears,
+                    }
+                  )
+                : null;
+
+              const projectedAt18 =
+                isChild && yearsTo18 !== null && yearsTo18 > 0 && memberProjection
+                  ? memberProjection.data[yearsTo18 - 1]?.netWorth
+                  : null;
+
+              return (
+                <div key={member.id} className="border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: member.color }}
+                    >
+                      {member.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{member.name}</p>
+                      {age !== null && (
+                        <p className="text-xs text-gray-400">
+                          Age {age}
+                          {isChild && yearsTo18 !== null ? ` · ${yearsTo18} years until 18` : ''}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-1">Current total</p>
+                  <p className="text-lg font-bold text-gray-900 mb-2">{formatCurrency(memberTotal)}</p>
+                  {projectedAt18 !== null && projectedAt18 !== undefined && (
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-xs text-blue-600 font-medium">
+                        Projected at age 18 (no new contributions, {((selected?.assumptions.returns.equity ?? 0.07) * 100).toFixed(0)}% equity growth)
+                      </p>
+                      <p className="text-base font-bold text-blue-700">{formatCurrency(projectedAt18)}</p>
+                    </div>
+                  )}
+                  {!isChild && memberProjection && (
+                    <div className="bg-gray-50 rounded-lg p-3 mt-2">
+                      <p className="text-xs text-gray-500">In 20 years (no added savings, market returns only)</p>
+                      <p className="text-base font-bold text-gray-700">{formatCurrency(memberProjection.data[19]?.netWorth ?? 0)}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            }).filter(Boolean)}
           </div>
         </div>
       )}

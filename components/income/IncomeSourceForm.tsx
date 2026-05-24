@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import type { FamilyMember, IncomeType, IncomeFrequency, Currency } from '@/lib/types';
+import type { FamilyMember, IncomeType, IncomeFrequency, Currency, IncomeSource } from '@/lib/types';
 import { INCOME_TYPE_LABELS, CURRENCIES } from '@/lib/types';
 
 interface VestingRow {
@@ -11,29 +11,41 @@ interface VestingRow {
   grant_price: string;
   estimated_value_per_share: string;
   currency: Currency;
+  is_vested: boolean;
 }
 
 interface IncomeSourceFormProps {
   members: FamilyMember[];
+  source?: IncomeSource; // present = edit mode
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function IncomeSourceForm({ members, onSubmit, onCancel }: IncomeSourceFormProps) {
+export default function IncomeSourceForm({ members, source, onSubmit, onCancel }: IncomeSourceFormProps) {
+  const isEdit = !!source;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    family_member_id: members[0]?.id ?? '',
-    name: '',
-    employer: '',
-    income_type: 'salary' as IncomeType,
-    frequency: 'monthly' as IncomeFrequency,
-    gross_amount: '',
-    currency: 'GBP' as Currency,
-    start_date: '',
-    end_date: '',
-    notes: '',
+    family_member_id: source?.family_member_id ?? members[0]?.id ?? '',
+    name: source?.name ?? '',
+    employer: source?.employer ?? '',
+    income_type: (source?.income_type ?? 'salary') as IncomeType,
+    frequency: (source?.frequency ?? 'monthly') as IncomeFrequency,
+    gross_amount: source?.gross_amount?.toString() ?? '',
+    currency: (source?.currency ?? 'GBP') as Currency,
+    start_date: source?.start_date ?? '',
+    end_date: source?.end_date ?? '',
+    notes: source?.notes ?? '',
   });
-  const [vestingRows, setVestingRows] = useState<VestingRow[]>([]);
+  const [vestingRows, setVestingRows] = useState<VestingRow[]>(
+    source?.vesting_events?.map((v) => ({
+      vest_date: v.vest_date,
+      shares: v.shares.toString(),
+      grant_price: v.grant_price?.toString() ?? '',
+      estimated_value_per_share: v.estimated_value_per_share?.toString() ?? '',
+      currency: v.currency,
+      is_vested: v.is_vested,
+    })) ?? []
+  );
   const isRSU = form.income_type === 'rsu' || form.income_type === 'espp';
 
   const set = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }));
@@ -41,11 +53,23 @@ export default function IncomeSourceForm({ members, onSubmit, onCancel }: Income
   const addVestingRow = () =>
     setVestingRows((p) => [
       ...p,
-      { vest_date: '', shares: '', grant_price: '', estimated_value_per_share: '', currency: 'USD' },
+      { vest_date: '', shares: '', grant_price: '', estimated_value_per_share: '', currency: 'USD', is_vested: false },
     ]);
 
-  const updateVesting = (i: number, key: keyof VestingRow, value: string) =>
-    setVestingRows((p) => p.map((r, idx) => (idx === i ? { ...r, [key]: value } : r)));
+  const updateVesting = (i: number, key: keyof VestingRow, value: string | boolean) => {
+    setVestingRows((p) =>
+      p.map((r, idx) => {
+        if (idx !== i) return r;
+        const updated = { ...r, [key]: value };
+        // Auto-detect past dates and set is_vested
+        if (key === 'vest_date' && typeof value === 'string' && value) {
+          const isPast = new Date(value) < new Date();
+          updated.is_vested = isPast;
+        }
+        return updated;
+      })
+    );
+  };
 
   const removeVesting = (i: number) => setVestingRows((p) => p.filter((_, idx) => idx !== i));
 
@@ -71,6 +95,7 @@ export default function IncomeSourceForm({ members, onSubmit, onCancel }: Income
             ? parseFloat(r.estimated_value_per_share)
             : null,
           currency: r.currency,
+          is_vested: r.is_vested,
           total_estimated_value:
             r.shares && r.estimated_value_per_share
               ? parseFloat(r.shares) * parseFloat(r.estimated_value_per_share)
@@ -169,23 +194,60 @@ export default function IncomeSourceForm({ members, onSubmit, onCancel }: Income
           )}
 
           {vestingRows.map((row, i) => (
-            <div key={i} className="grid grid-cols-5 gap-2 items-end">
+            <div key={i} className="grid grid-cols-6 gap-2 items-end">
               <div className="col-span-2">
                 <label className="text-xs text-gray-500">Vest date</label>
-                <input className="input text-xs py-1.5" type="date" value={row.vest_date} onChange={(e) => updateVesting(i, 'vest_date', e.target.value)} required />
+                <input
+                  className="input text-xs py-1.5"
+                  type="date"
+                  value={row.vest_date}
+                  onChange={(e) => updateVesting(i, 'vest_date', e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <label className="text-xs text-gray-500">Shares</label>
-                <input className="input text-xs py-1.5" type="number" value={row.shares} onChange={(e) => updateVesting(i, 'shares', e.target.value)} placeholder="100" required />
+                <input
+                  className="input text-xs py-1.5"
+                  type="number"
+                  value={row.shares}
+                  onChange={(e) => updateVesting(i, 'shares', e.target.value)}
+                  placeholder="100"
+                  required
+                />
               </div>
               <div>
                 <label className="text-xs text-gray-500">Est. price</label>
-                <input className="input text-xs py-1.5" type="number" step="0.01" value={row.estimated_value_per_share} onChange={(e) => updateVesting(i, 'estimated_value_per_share', e.target.value)} placeholder="$20" />
+                <input
+                  className="input text-xs py-1.5"
+                  type="number"
+                  step="0.01"
+                  value={row.estimated_value_per_share}
+                  onChange={(e) => updateVesting(i, 'estimated_value_per_share', e.target.value)}
+                  placeholder="$20"
+                />
               </div>
-              <div className="flex gap-1">
-                <select className="input text-xs py-1.5 flex-1" value={row.currency} onChange={(e) => updateVesting(i, 'currency', e.target.value as Currency)}>
+              <div>
+                <label className="text-xs text-gray-500">Currency</label>
+                <select
+                  className="input text-xs py-1.5"
+                  value={row.currency}
+                  onChange={(e) => updateVesting(i, 'currency', e.target.value as Currency)}
+                >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    id={`vested-${i}`}
+                    checked={row.is_vested}
+                    onChange={(e) => updateVesting(i, 'is_vested', e.target.checked)}
+                    className="rounded border-gray-300 w-3 h-3"
+                  />
+                  <label htmlFor={`vested-${i}`} className="text-xs text-gray-500">Vested?</label>
+                </div>
                 <button type="button" className="btn-danger p-1.5" onClick={() => removeVesting(i)}>
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -203,7 +265,7 @@ export default function IncomeSourceForm({ members, onSubmit, onCancel }: Income
       <div className="flex gap-2 pt-2">
         <button type="button" className="btn-secondary flex-1" onClick={onCancel}>Cancel</button>
         <button type="submit" className="btn-primary flex-1" disabled={loading}>
-          {loading ? 'Saving…' : 'Add income source'}
+          {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Add income source'}
         </button>
       </div>
     </form>

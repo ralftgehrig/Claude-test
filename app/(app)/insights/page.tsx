@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import {
   BarChart,
@@ -16,7 +16,8 @@ import {
 import { Lightbulb, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatCurrency, formatPercent } from '@/lib/utils';
-import type { ReturnAnalysis } from '@/lib/types';
+import { ACCOUNT_CATEGORY, CATEGORY_COLORS } from '@/lib/types';
+import type { ReturnAnalysis, Account, FamilyMember, BalanceSnapshot, AssetCategory } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -29,6 +30,8 @@ export default function InsightsPage() {
     `/api/insights?${queryStr}`,
     fetcher
   );
+  const { data: accounts = [] } = useSWR<Account[]>('/api/accounts', fetcher);
+  const { data: members = [] } = useSWR<FamilyMember[]>('/api/family-members', fetcher);
 
   const validAnalyses = analyses.filter(
     (a) => a && a.start_balance_gbp !== undefined
@@ -49,6 +52,31 @@ export default function InsightsPage() {
       annualised: a.annualised_return * 100,
     }));
 
+  // Per-member asset breakdown
+  const memberCategoryBreakdown = useMemo(() => {
+    const result: Record<string, Partial<Record<AssetCategory, number>>> = {};
+    for (const account of accounts) {
+      if (!account.is_active) continue;
+      const snap = account.latest_snapshot as BalanceSnapshot | null;
+      if (!snap) continue;
+      const memberId = account.family_member_id;
+      if (!result[memberId]) result[memberId] = {};
+      const cat = ACCOUNT_CATEGORY[account.account_type] ?? 'cash';
+      const val = account.is_liability ? -snap.gbp_balance : snap.gbp_balance;
+      result[memberId][cat] = (result[memberId][cat] ?? 0) + val;
+    }
+    return result;
+  }, [accounts]);
+
+  const CATEGORY_LABELS: Record<AssetCategory, string> = {
+    equity: 'Equity',
+    pension: 'Pension',
+    property: 'Property',
+    cash: 'Cash',
+    crypto: 'Crypto',
+    debt: 'Debt',
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -57,6 +85,67 @@ export default function InsightsPage() {
           Investment return vs. contributions — see where your growth really comes from
         </p>
       </div>
+
+      {/* Assets by family member & category */}
+      {members.length > 0 && accounts.some((a) => a.latest_snapshot) && (
+        <div className="card">
+          <p className="text-sm font-semibold text-gray-900 mb-4">Assets by family member &amp; category</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {members.map((member) => {
+              const breakdown = memberCategoryBreakdown[member.id];
+              if (!breakdown) return null;
+              const memberTotal = Object.values(breakdown).reduce((s, v) => s + (v ?? 0), 0);
+              if (memberTotal === 0) return null;
+              const categories = Object.entries(breakdown) as [AssetCategory, number][];
+              const sortedCats = categories.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+              const maxVal = Math.max(...sortedCats.map(([, v]) => Math.abs(v)));
+
+              return (
+                <div key={member.id} className="border border-gray-100 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style={{ backgroundColor: member.color }}
+                    >
+                      {member.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{member.name}</p>
+                      <p className={`text-xs font-medium ${memberTotal >= 0 ? 'text-gray-600' : 'text-red-500'}`}>
+                        {formatCurrency(memberTotal)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {sortedCats.map(([cat, val]) => {
+                      const pct = maxVal > 0 ? (Math.abs(val) / maxVal) * 100 : 0;
+                      return (
+                        <div key={cat}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs text-gray-500">{CATEGORY_LABELS[cat]}</span>
+                            <span className={`text-xs font-medium ${val < 0 ? 'text-red-500' : 'text-gray-700'}`}>
+                              {val < 0 ? '−' : ''}{formatCurrency(Math.abs(val), 'GBP', true)}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: cat === 'debt' ? '#ef4444' : CATEGORY_COLORS[cat],
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Date range filter */}
       <div className="card">
