@@ -23,43 +23,41 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const supabase = createClient();
   const body = await req.json();
+  const { contribution_amount, ...snapshotBody } = body;
 
-  // Fetch live rates and compute GBP equivalent if not GBP
-  let gbp_balance = body.balance;
+  let gbp_balance = snapshotBody.balance;
   let fx_rate = 1.0;
 
-  if (body.currency !== 'GBP') {
+  if (snapshotBody.currency !== 'GBP') {
     try {
       const rates = await fetchLiveRates('GBP');
-      fx_rate = rates[body.currency as Currency] ?? 1;
-      gbp_balance = convertToGBP(body.balance, body.currency, rates);
+      fx_rate = rates[snapshotBody.currency as Currency] ?? 1;
+      gbp_balance = convertToGBP(snapshotBody.balance, snapshotBody.currency, rates);
     } catch {
-      // Fall back to manual rate if provided
-      if (body.fx_rate) {
-        fx_rate = body.fx_rate;
-        gbp_balance = body.balance / body.fx_rate;
+      if (snapshotBody.fx_rate) {
+        fx_rate = snapshotBody.fx_rate;
+        gbp_balance = snapshotBody.balance / snapshotBody.fx_rate;
       }
     }
   }
 
   const { data, error } = await supabase
     .from('balance_snapshots')
-    .insert({ ...body, gbp_balance, fx_rate })
+    .insert({ ...snapshotBody, gbp_balance, fx_rate })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Also record as a contribution if flagged
-  if (body.contribution_amount !== undefined) {
-    const contribGBP = body.contribution_amount / fx_rate;
+  if (contribution_amount !== undefined && contribution_amount !== null && contribution_amount !== 0) {
+    const contribGBP = contribution_amount / fx_rate;
     await supabase.from('contributions').insert({
-      account_id: body.account_id,
-      contribution_date: body.snapshot_date,
-      amount: body.contribution_amount,
-      currency: body.currency,
+      account_id: snapshotBody.account_id,
+      contribution_date: snapshotBody.snapshot_date,
+      amount: contribution_amount,
+      currency: snapshotBody.currency,
       gbp_amount: contribGBP,
-      notes: body.notes,
+      notes: snapshotBody.notes,
     });
   }
 
