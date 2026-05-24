@@ -189,6 +189,10 @@ export async function GET(req: NextRequest) {
   };
 
   // ── 3. Process existing accounts ───────────────────────────────────────────
+  // Debug: dump all of Ralf's accounts to diagnose SIPP lookup
+  const { data: ralfAccounts } = await supabase.from('accounts').select('id, name, provider, account_type').eq('family_member_id', ralf.id);
+  log.push('Ralf accounts: ' + JSON.stringify(ralfAccounts?.map(a => `${a.name}|${a.provider}|${a.account_type}`)));
+
   for (const [key, { snaps, cur }] of Object.entries(DATA)) {
     const [name, provider, owner] = key.split('|');
     const memberId = memberIdFor(owner);
