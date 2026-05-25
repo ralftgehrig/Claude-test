@@ -8,7 +8,7 @@ import AssetBreakdown from '@/components/dashboard/AssetBreakdown';
 import { computeNetWorth } from '@/lib/calculations/net-worth';
 import { formatCurrency, formatPercent, formatDate, ageFromDob } from '@/lib/utils';
 import { MEMBER_COLORS } from '@/lib/types';
-import { useDisplayCurrency } from '@/lib/display-currency';
+import { useDisplayCurrency, fxFormat } from '@/lib/display-currency';
 import type { Account, BalanceSnapshot, FamilyMember, NetWorthSnapshot } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -38,8 +38,9 @@ export default function DashboardPage() {
   const changePct = prev && change ? change / prev : null;
 
   const memberMap = Object.fromEntries(members.map((m) => [m.id, m]));
-  const { format: fxFormat, currency: displayCurrency, setCurrency, loading: fxLoading } = useDisplayCurrency();
+  const { currency: displayCurrency, rates, setCurrency, loading: fxLoading } = useDisplayCurrency();
   const isGBP = displayCurrency === 'GBP';
+  const fmt = (v: number, compact = false) => fxFormat(v, displayCurrency, rates, compact);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -71,7 +72,7 @@ export default function DashboardPage() {
         <div className="flex items-end gap-4">
           <div>
             <p className="text-4xl font-bold tracking-tight">
-              {netWorth ? fxFormat(netWorth.total_gbp) : '—'}
+              {netWorth ? fmt(netWorth.total_gbp) : '—'}
               {fxLoading && <span className="text-lg opacity-50 ml-2">…</span>}
             </p>
             {!isGBP && netWorth && (
@@ -81,7 +82,7 @@ export default function DashboardPage() {
           {change !== null && changePct !== null && (
             <div className={`flex items-center gap-1 mb-1 text-sm font-medium ${change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
               {change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              {fxFormat(Math.abs(change))}
+              {fmt(Math.abs(change))}
               <span className="opacity-75">({formatPercent(Math.abs(changePct))})</span>
             </div>
           )}
@@ -90,11 +91,11 @@ export default function DashboardPage() {
           <div className="flex gap-6 mt-3 pt-3 border-t border-white/20">
             <div>
               <p className="text-xs text-primary-300">Assets</p>
-              <p className="text-sm font-semibold">{fxFormat(netWorth.assets_gbp)}</p>
+              <p className="text-sm font-semibold">{fmt(netWorth.assets_gbp)}</p>
             </div>
             <div>
               <p className="text-xs text-primary-300">Liabilities</p>
-              <p className="text-sm font-semibold">−{fxFormat(netWorth.liabilities_gbp)}</p>
+              <p className="text-sm font-semibold">−{fmt(netWorth.liabilities_gbp)}</p>
             </div>
           </div>
         )}
@@ -155,7 +156,7 @@ export default function DashboardPage() {
                           )}
                         </p>
                         <p className="text-sm font-semibold text-gray-900 ml-2 flex-shrink-0">
-                          {fxFormat(memberNW)}
+                          {fmt(memberNW)}
                         </p>
                       </div>
                       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">

@@ -9,11 +9,22 @@ import BalanceUpdateForm from '@/components/accounts/BalanceUpdateForm';
 import HistoryEntryForm from '@/components/accounts/HistoryEntryForm';
 import SnapshotHistoryModal from '@/components/accounts/SnapshotHistoryModal';
 import EmptyState from '@/components/ui/EmptyState';
-import { formatCurrency, formatDate, groupBy } from '@/lib/utils';
+import { formatDate, groupBy } from '@/lib/utils';
 import { ACCOUNT_TYPE_LABELS, CATEGORY_COLORS, ACCOUNT_CATEGORY } from '@/lib/types';
-import type { Account, FamilyMember, BalanceSnapshot } from '@/lib/types';
+import { useDisplayCurrency, fxFormat } from '@/lib/display-currency';
+import type { Account, FamilyMember, BalanceSnapshot, AssetCategory } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+const CATEGORY_ORDER: AssetCategory[] = ['equity', 'pension', 'property', 'cash', 'crypto', 'debt'];
+const CATEGORY_LABELS: Record<AssetCategory, string> = {
+  equity: 'Equities',
+  pension: 'Pensions',
+  property: 'Property',
+  cash: 'Cash',
+  crypto: 'Crypto',
+  debt: 'Debt',
+};
 
 export default function AccountsPage() {
   const { data: accounts = [], isLoading } = useSWR<Account[]>('/api/accounts', fetcher);
@@ -25,6 +36,9 @@ export default function AccountsPage() {
   const [historyAccount, setHistoryAccount] = useState<Account | null>(null);
   const [viewingHistory, setViewingHistory] = useState<Account | null>(null);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
+
+  const { currency, rates } = useDisplayCurrency();
+  const fmt = (v: number) => fxFormat(v, currency, rates);
 
   const byMember = groupBy(accounts, (a) => a.family_member_id);
 
@@ -87,7 +101,7 @@ export default function AccountsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Accounts</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{accounts.length} accounts · {formatCurrency(totalGBP)} net</p>
+          <p className="text-sm text-gray-500 mt-0.5">{accounts.length} accounts · {fmt(totalGBP)} net</p>
         </div>
         <button className="btn-primary" onClick={() => setShowAddAccount(true)}>
           <Plus className="w-4 h-4" /> Add account
@@ -107,12 +121,32 @@ export default function AccountsPage() {
       {members.map((member) => {
         const memberAccounts = byMember[member.id] ?? [];
         if (!memberAccounts.length) return null;
+
         const memberTotal = memberAccounts.reduce((sum, a) => {
           const snap = a.latest_snapshot as BalanceSnapshot | null;
           if (!snap) return sum;
           return sum + (a.is_liability ? -snap.gbp_balance : snap.gbp_balance);
         }, 0);
         const isExpanded = expandedMember === null || expandedMember === member.id;
+
+        // Group by asset category, sort categories by absolute total descending, sort accounts within each by gbp_balance descending
+        const byCategory = groupBy(memberAccounts, (a) => ACCOUNT_CATEGORY[a.account_type] ?? 'cash');
+        const categoryGroups = CATEGORY_ORDER
+          .filter((cat) => byCategory[cat]?.length)
+          .map((cat) => {
+            const catAccounts = (byCategory[cat] ?? []).slice().sort((a, b) => {
+              const snapA = (a.latest_snapshot as BalanceSnapshot | null)?.gbp_balance ?? 0;
+              const snapB = (b.latest_snapshot as BalanceSnapshot | null)?.gbp_balance ?? 0;
+              return snapB - snapA;
+            });
+            const catTotal = catAccounts.reduce((sum, a) => {
+              const snap = a.latest_snapshot as BalanceSnapshot | null;
+              if (!snap) return sum;
+              return sum + (a.is_liability ? -snap.gbp_balance : snap.gbp_balance);
+            }, 0);
+            return { cat, catAccounts, catTotal };
+          })
+          .sort((a, b) => Math.abs(b.catTotal) - Math.abs(a.catTotal));
 
         return (
           <div key={member.id} className="card">
@@ -125,62 +159,83 @@ export default function AccountsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <p className={`text-sm font-bold ${memberTotal >= 0 ? 'text-gray-900' : 'text-red-500'}`}>{formatCurrency(memberTotal)}</p>
+                <p className={`text-sm font-bold ${memberTotal >= 0 ? 'text-gray-900' : 'text-red-500'}`}>{fmt(memberTotal)}</p>
                 {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
               </div>
             </button>
 
             {isExpanded && (
-              <div className="mt-4 divide-y divide-gray-50">
-                {memberAccounts.map((account) => {
-                  const snap = account.latest_snapshot as BalanceSnapshot | null;
-                  const cat = ACCOUNT_CATEGORY[account.account_type] ?? 'cash';
-                  return (
-                    <div key={account.id} className="flex items-center gap-3 py-3">
-                      <div className="w-2 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">{account.name}</p>
-                          <span className="badge badge-gray flex-shrink-0">{ACCOUNT_TYPE_LABELS[account.account_type]}</span>
-                          {account.is_liability && <span className="badge badge-red flex-shrink-0">Debt</span>}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {account.provider}{snap && ` · Updated ${formatDate(snap.snapshot_date, 'd MMM yyyy')}`}{!snap && ' · No balance recorded'}
-                        </p>
+              <div className="mt-4 space-y-4">
+                {categoryGroups.map(({ cat, catAccounts, catTotal }) => (
+                  <div key={cat}>
+                    {/* Asset class header + subtotal */}
+                    <div className="flex items-center justify-between px-1 mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
+                        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: CATEGORY_COLORS[cat] }}>
+                          {CATEGORY_LABELS[cat]}
+                        </span>
                       </div>
-                      <div className="text-right flex-shrink-0">
-                        {snap ? (
-                          <>
-                            <p className={`text-sm font-semibold ${account.is_liability ? 'text-red-500' : 'text-gray-900'}`}>
-                              {account.is_liability ? '−' : ''}{formatCurrency(snap.gbp_balance)}
-                            </p>
-                            {snap.currency !== 'GBP' && <p className="text-xs text-gray-400">{formatCurrency(snap.balance, snap.currency as never)}</p>}
-                          </>
-                        ) : (
-                          <p className="text-xs text-gray-300">No data</p>
-                        )}
-                      </div>
-                      {/* Action buttons */}
-                      <div className="flex gap-1 flex-shrink-0">
-                        <button className="btn-ghost p-1.5 text-gray-400 hover:text-blue-500" title="Update balance" onClick={() => setUpdatingAccount(account)}>
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="btn-ghost p-1.5 text-gray-400 hover:text-purple-500" title="Add historic data" onClick={() => setHistoryAccount(account)}>
-                          <Clock className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="btn-ghost p-1.5 text-gray-400 hover:text-indigo-500" title="View all data points" onClick={() => setViewingHistory(account)}>
-                          <List className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="btn-ghost p-1.5 text-gray-400 hover:text-gray-700" title="Edit account" onClick={() => setEditingAccount(account)}>
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button className="btn-ghost p-1.5 text-gray-400 hover:text-red-500" title="Delete account" onClick={() => handleDeleteAccount(account)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <span className={`text-xs font-semibold ${catTotal < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                        {catTotal < 0 ? '−' : ''}{fmt(Math.abs(catTotal))}
+                      </span>
                     </div>
-                  );
-                })}
+
+                    {/* Accounts in this category */}
+                    <div className="divide-y divide-gray-50">
+                      {catAccounts.map((account) => {
+                        const snap = account.latest_snapshot as BalanceSnapshot | null;
+                        return (
+                          <div key={account.id} className="flex items-center gap-3 py-3">
+                            <div className="w-1.5 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat] }} />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900 truncate">{account.name}</p>
+                                <span className="badge badge-gray flex-shrink-0">{ACCOUNT_TYPE_LABELS[account.account_type]}</span>
+                                {account.is_liability && <span className="badge badge-red flex-shrink-0">Debt</span>}
+                              </div>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {account.provider}{snap && ` · Updated ${formatDate(snap.snapshot_date, 'd MMM yyyy')}`}{!snap && ' · No balance recorded'}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              {snap ? (
+                                <>
+                                  <p className={`text-sm font-semibold ${account.is_liability ? 'text-red-500' : 'text-gray-900'}`}>
+                                    {account.is_liability ? '−' : ''}{fmt(snap.gbp_balance)}
+                                  </p>
+                                  {snap.currency !== 'GBP' && (
+                                    <p className="text-xs text-gray-400">{snap.currency} {snap.balance.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-xs text-gray-300">No data</p>
+                              )}
+                            </div>
+                            {/* Action buttons */}
+                            <div className="flex gap-1 flex-shrink-0">
+                              <button className="btn-ghost p-1.5 text-gray-400 hover:text-blue-500" title="Update balance" onClick={() => setUpdatingAccount(account)}>
+                                <RefreshCw className="w-3.5 h-3.5" />
+                              </button>
+                              <button className="btn-ghost p-1.5 text-gray-400 hover:text-purple-500" title="Add historic data" onClick={() => setHistoryAccount(account)}>
+                                <Clock className="w-3.5 h-3.5" />
+                              </button>
+                              <button className="btn-ghost p-1.5 text-gray-400 hover:text-indigo-500" title="View all data points" onClick={() => setViewingHistory(account)}>
+                                <List className="w-3.5 h-3.5" />
+                              </button>
+                              <button className="btn-ghost p-1.5 text-gray-400 hover:text-gray-700" title="Edit account" onClick={() => setEditingAccount(account)}>
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button className="btn-ghost p-1.5 text-gray-400 hover:text-red-500" title="Delete account" onClick={() => handleDeleteAccount(account)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
