@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
-import { Plus, Wallet, RefreshCw, ChevronDown, ChevronUp, Edit2, Trash2, Clock } from 'lucide-react';
+import { Plus, Wallet, RefreshCw, ChevronDown, ChevronUp, Edit2, Trash2, Clock, List } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import AccountForm from '@/components/accounts/AccountForm';
 import BalanceUpdateForm from '@/components/accounts/BalanceUpdateForm';
 import HistoryEntryForm from '@/components/accounts/HistoryEntryForm';
+import SnapshotHistoryModal from '@/components/accounts/SnapshotHistoryModal';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatCurrency, formatDate, groupBy } from '@/lib/utils';
 import { ACCOUNT_TYPE_LABELS, CATEGORY_COLORS, ACCOUNT_CATEGORY } from '@/lib/types';
@@ -22,6 +23,7 @@ export default function AccountsPage() {
   const [updatingAccount, setUpdatingAccount] = useState<Account | null>(null);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [historyAccount, setHistoryAccount] = useState<Account | null>(null);
+  const [viewingHistory, setViewingHistory] = useState<Account | null>(null);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
 
   const byMember = groupBy(accounts, (a) => a.family_member_id);
@@ -166,6 +168,9 @@ export default function AccountsPage() {
                         <button className="btn-ghost p-1.5 text-gray-400 hover:text-purple-500" title="Add historic data" onClick={() => setHistoryAccount(account)}>
                           <Clock className="w-3.5 h-3.5" />
                         </button>
+                        <button className="btn-ghost p-1.5 text-gray-400 hover:text-indigo-500" title="View all data points" onClick={() => setViewingHistory(account)}>
+                          <List className="w-3.5 h-3.5" />
+                        </button>
                         <button className="btn-ghost p-1.5 text-gray-400 hover:text-gray-700" title="Edit account" onClick={() => setEditingAccount(account)}>
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -197,6 +202,10 @@ export default function AccountsPage() {
       <Modal open={!!historyAccount} onClose={() => setHistoryAccount(null)} title={`Add historic data — ${historyAccount?.name}`} size="lg">
         {historyAccount && <HistoryEntryForm account={historyAccount} onSubmit={handleHistoryEntry} onCancel={() => setHistoryAccount(null)} />}
       </Modal>
+
+      {viewingHistory && (
+        <SnapshotHistoryModal account={viewingHistory} onClose={() => setViewingHistory(null)} />
+      )}
     </div>
   );
 }

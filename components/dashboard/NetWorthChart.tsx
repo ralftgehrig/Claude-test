@@ -17,69 +17,85 @@ interface DataPoint {
   total: number;
 }
 
-interface NetWorthChartProps {
-  data: DataPoint[];
-}
-
 const CustomTooltip = ({ active, payload, label }: {
   active?: boolean;
   payload?: Array<{ value: number }>;
-  label?: string;
+  label?: number;
 }) => {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload?.length || !label) return null;
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-lg px-4 py-3">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-base font-bold text-gray-900">
+    <div
+      className="px-4 py-3 rounded-2xl"
+      style={{
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+        border: '0.5px solid rgba(60,60,67,0.12)',
+      }}
+    >
+      <p className="text-[11px] font-medium mb-1" style={{ color: '#8E8E93' }}>
+        {format(new Date(label), 'MMMM yyyy')}
+      </p>
+      <p className="text-[15px] font-bold" style={{ color: '#1C1C1E' }}>
         {formatCurrency(payload[0].value)}
       </p>
     </div>
   );
 };
 
-export default function NetWorthChart({ data }: NetWorthChartProps) {
-  const formatted = data.map((d) => ({
-    ...d,
-    label: format(parseISO(d.date), 'MMM yy'),
+export default function NetWorthChart({ data }: { data: DataPoint[] }) {
+  // Convert to numeric timestamps so Recharts spaces points by real elapsed time
+  const points = data.map((d) => ({
+    ts: parseISO(d.date).getTime(),
+    total: d.total,
   }));
 
-  const min = Math.min(...data.map((d) => d.total));
-  const max = Math.max(...data.map((d) => d.total));
-  const padding = (max - min) * 0.1;
+  const min = Math.min(...points.map((d) => d.total));
+  const max = Math.max(...points.map((d) => d.total));
+  const padding = (max - min) * 0.08;
+
+  const tsMin = points[0]?.ts ?? 0;
+  const tsMax = points[points.length - 1]?.ts ?? 0;
 
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={formatted} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+      <AreaChart data={points} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
         <defs>
-          <linearGradient id="netWorthGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+          <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#007AFF" stopOpacity={0.18} />
+            <stop offset="95%" stopColor="#007AFF" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(60,60,67,0.08)" />
         <XAxis
-          dataKey="label"
-          tick={{ fontSize: 11, fill: '#9ca3af' }}
+          dataKey="ts"
+          type="number"
+          scale="time"
+          domain={[tsMin, tsMax]}
+          tickFormatter={(ts: number) => format(new Date(ts), 'MMM yy')}
+          tick={{ fontSize: 10, fill: '#8E8E93' }}
           tickLine={false}
           axisLine={false}
+          tickCount={6}
         />
         <YAxis
           tickFormatter={(v) => formatCurrency(v, 'GBP', true)}
-          tick={{ fontSize: 11, fill: '#9ca3af' }}
+          tick={{ fontSize: 10, fill: '#8E8E93' }}
           tickLine={false}
           axisLine={false}
-          width={60}
+          width={58}
           domain={[min - padding, max + padding]}
         />
         <Tooltip content={<CustomTooltip />} />
         <Area
           type="monotone"
           dataKey="total"
-          stroke="#3b82f6"
-          strokeWidth={2.5}
-          fill="url(#netWorthGradient)"
+          stroke="#007AFF"
+          strokeWidth={2}
+          fill="url(#nwGrad)"
           dot={false}
-          activeDot={{ r: 5, strokeWidth: 0, fill: '#3b82f6' }}
+          activeDot={{ r: 5, strokeWidth: 0, fill: '#007AFF' }}
         />
       </AreaChart>
     </ResponsiveContainer>
