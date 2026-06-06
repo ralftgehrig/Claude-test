@@ -1,8 +1,9 @@
 'use client';
 
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency, formatPercent } from '@/lib/utils';
 import { CATEGORY_COLORS } from '@/lib/types';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import type { AssetCategory } from '@/lib/types';
 
 interface AssetBreakdownProps {
@@ -20,6 +21,8 @@ const LABELS: Record<AssetCategory, string> = {
 };
 
 export default function AssetBreakdown({ byCategory, totalGBP }: AssetBreakdownProps) {
+  const { mask } = useDisplayCurrency();
+
   const data = Object.entries(byCategory)
     .filter(([, v]) => v && Math.abs(v) > 0)
     .map(([cat, value]) => ({
@@ -56,7 +59,7 @@ export default function AssetBreakdown({ byCategory, totalGBP }: AssetBreakdownP
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) => formatCurrency(value)}
+            formatter={(value: number) => mask(formatCurrency(value))}
             contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '12px' }}
           />
         </PieChart>
@@ -71,7 +74,7 @@ export default function AssetBreakdown({ byCategory, totalGBP }: AssetBreakdownP
             />
             <span className="text-xs text-gray-600 flex-1">{entry.name}</span>
             <span className="text-xs font-medium text-gray-900">
-              {formatCurrency(entry.rawValue, 'GBP', true)}
+              {mask(formatCurrency(entry.rawValue, 'GBP', true))}
             </span>
             <span className="text-xs text-gray-400 w-12 text-right">
               {totalGBP > 0 ? formatPercent(Math.abs(entry.rawValue) / totalGBP, 0) : '–'}

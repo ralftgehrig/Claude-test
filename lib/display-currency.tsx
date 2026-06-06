@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import useSWR from 'swr';
 import type { Currency } from './types';
 
@@ -10,64 +10,7 @@ const SYMBOLS: Record<string, string> = {
   GBP: '£', USD: '$', EUR: '€', CAD: 'C$', SGD: 'S$',
 };
 
-// Fetches through our own API route (server-side) so no CORS/network issues
-const rateFetcher = (url: string) =>
-  fetch(url).then((r) => r.json()) as Promise<Record<string, number>>;
-
-interface DisplayCurrencyCtx {
-  currency: Currency;
-  rates: Record<string, number>; // GBP → X
-  setCurrency: (c: Currency) => void;
-  symbol: string;
-  loading: boolean;
-  displayCurrencies: Currency[];
-}
-
-const DisplayCurrencyContext = createContext<DisplayCurrencyCtx>({
-  currency: 'GBP',
-  rates: {},
-  setCurrency: () => {},
-  symbol: '£',
-  loading: false,
-  displayCurrencies: DISPLAY_CURRENCIES,
-});
-
-export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
-  const [currency, setCurrencyRaw] = useState<Currency>('GBP');
-
-  const { data: rates = {}, isLoading } = useSWR('/api/fx-rates', rateFetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 3_600_000,
-  });
-
-  // Restore preference from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('displayCurrency') as Currency | null;
-      if (saved && DISPLAY_CURRENCIES.includes(saved)) setCurrencyRaw(saved);
-    } catch {}
-  }, []);
-
-  const setCurrency = (c: Currency) => {
-    setCurrencyRaw(c);
-    try { localStorage.setItem('displayCurrency', c); } catch {}
-  };
-
-  return (
-    <DisplayCurrencyContext.Provider
-      value={{ currency, rates, setCurrency, symbol: SYMBOLS[currency] ?? '£', loading: isLoading, displayCurrencies: DISPLAY_CURRENCIES }}
-    >
-      {children}
-    </DisplayCurrencyContext.Provider>
-  );
-}
-
-export function useDisplayCurrency() {
-  return useContext(DisplayCurrencyContext);
-}
-
-// ── Pure conversion helpers — call these in components with context values ────
+// ── Pure conversion helpers — can be imported and called outside context ──────
 
 export function fxConvert(
   gbpAmount: number,
@@ -98,4 +41,106 @@ export function fxFormat(
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(Math.abs(v))}`;
+}
+
+// ── Context ───────────────────────────────────────────────────────────────────
+
+const rateFetcher = (url: string) =>
+  fetch(url).then((r) => r.json()) as Promise<Record<string, number>>;
+
+interface DisplayCurrencyCtx {
+  currency: Currency;
+  rates: Record<string, number>;
+  setCurrency: (c: Currency) => void;
+  symbol: string;
+  loading: boolean;
+  displayCurrencies: Currency[];
+  /** True when amounts are hidden for demo/privacy purposes */
+  privacyMode: boolean;
+  togglePrivacy: () => void;
+  /** Format a GBP amount in the selected display currency, masking if privacy mode is on */
+  fmt: (v: number, compact?: boolean) => string;
+  /** Wrap any pre-formatted string — returns '•••' when privacy mode is on */
+  mask: (s: string) => string;
+}
+
+const DisplayCurrencyContext = createContext<DisplayCurrencyCtx>({
+  currency: 'GBP',
+  rates: {},
+  setCurrency: () => {},
+  symbol: '£',
+  loading: false,
+  displayCurrencies: DISPLAY_CURRENCIES,
+  privacyMode: false,
+  togglePrivacy: () => {},
+  fmt: () => '•••',
+  mask: (s) => s,
+});
+
+export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
+  const [currency, setCurrencyRaw] = useState<Currency>('GBP');
+  const [privacyMode, setPrivacyMode] = useState(false);
+
+  const { data: rates = {}, isLoading } = useSWR('/api/fx-rates', rateFetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 3_600_000,
+  });
+
+  // Restore preferences from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedCurrency = localStorage.getItem('displayCurrency') as Currency | null;
+      if (savedCurrency && DISPLAY_CURRENCIES.includes(savedCurrency)) setCurrencyRaw(savedCurrency);
+      const savedPrivacy = localStorage.getItem('privacyMode');
+      if (savedPrivacy === 'true') setPrivacyMode(true);
+    } catch {}
+  }, []);
+
+  const setCurrency = (c: Currency) => {
+    setCurrencyRaw(c);
+    try { localStorage.setItem('displayCurrency', c); } catch {}
+  };
+
+  const togglePrivacy = useCallback(() => {
+    setPrivacyMode((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('privacyMode', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const mask = useCallback(
+    (s: string) => (privacyMode ? '•••' : s),
+    [privacyMode]
+  );
+
+  const fmt = useCallback(
+    (v: number, compact?: boolean) =>
+      privacyMode ? '•••' : fxFormat(v, currency, rates, compact),
+    [privacyMode, currency, rates]
+  );
+
+  return (
+    <DisplayCurrencyContext.Provider
+      value={{
+        currency,
+        rates,
+        setCurrency,
+        symbol: SYMBOLS[currency] ?? '£',
+        loading: isLoading,
+        displayCurrencies: DISPLAY_CURRENCIES,
+        privacyMode,
+        togglePrivacy,
+        fmt,
+        mask,
+      }}
+    >
+      {children}
+    </DisplayCurrencyContext.Provider>
+  );
+}
+
+export function useDisplayCurrency() {
+  return useContext(DisplayCurrencyContext);
 }

@@ -17,11 +17,13 @@ import { Lightbulb, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatCurrency, formatPercent } from '@/lib/utils';
 import { ACCOUNT_CATEGORY, CATEGORY_COLORS } from '@/lib/types';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import type { ReturnAnalysis, Account, FamilyMember, BalanceSnapshot, AssetCategory } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function InsightsPage() {
+  const { mask, privacyMode } = useDisplayCurrency();
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
@@ -112,7 +114,7 @@ export default function InsightsPage() {
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{member.name}</p>
                       <p className={`text-xs font-medium ${memberTotal >= 0 ? 'text-gray-600' : 'text-red-500'}`}>
-                        {formatCurrency(memberTotal)}
+                        {mask(formatCurrency(memberTotal))}
                       </p>
                     </div>
                   </div>
@@ -124,7 +126,7 @@ export default function InsightsPage() {
                           <div className="flex items-center justify-between mb-0.5">
                             <span className="text-xs text-gray-500">{CATEGORY_LABELS[cat]}</span>
                             <span className={`text-xs font-medium ${val < 0 ? 'text-red-500' : 'text-gray-700'}`}>
-                              {val < 0 ? '−' : ''}{formatCurrency(Math.abs(val), 'GBP', true)}
+                              {val < 0 ? '−' : ''}{mask(formatCurrency(Math.abs(val), 'GBP', true))}
                             </span>
                           </div>
                           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -188,13 +190,13 @@ export default function InsightsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="card">
               <p className="card-title">Total end balance</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalEndBalance)}</p>
+              <p className="text-2xl font-bold text-gray-900">{mask(formatCurrency(totalEndBalance))}</p>
             </div>
             <div className="card">
               <p className="card-title">Investment growth</p>
               <div className="flex items-center gap-2">
                 <p className={`text-2xl font-bold ${totalGrowth >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {totalGrowth >= 0 ? '+' : ''}{formatCurrency(totalGrowth)}
+                  {totalGrowth >= 0 ? '+' : ''}{mask(formatCurrency(totalGrowth))}
                 </p>
                 {totalGrowth >= 0
                   ? <TrendingUp className="w-5 h-5 text-green-500" />
@@ -204,7 +206,7 @@ export default function InsightsPage() {
             </div>
             <div className="card">
               <p className="card-title">Your contributions</p>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalContribs)}</p>
+              <p className="text-2xl font-bold text-blue-600">{mask(formatCurrency(totalContribs))}</p>
               <p className="text-xs text-gray-400 mt-1">What you put in</p>
             </div>
           </div>
@@ -224,10 +226,10 @@ export default function InsightsPage() {
               <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 48)}>
                 <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 60, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
-                  <XAxis type="number" tickFormatter={(v) => formatCurrency(v, 'GBP', true)} tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                  <XAxis type="number" tickFormatter={(v) => privacyMode ? '' : formatCurrency(v, 'GBP', true)} tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} tickLine={false} axisLine={false} width={120} />
                   <Tooltip
-                    formatter={(value: number, name: string) => [formatCurrency(value), name === 'contributions' ? 'Contributions' : 'Investment growth']}
+                    formatter={(value: number, name: string) => [mask(formatCurrency(value)), name === 'contributions' ? 'Contributions' : 'Investment growth']}
                     contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '12px' }}
                   />
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} formatter={(v) => v === 'contributions' ? 'Contributions' : 'Investment growth'} />
@@ -262,10 +264,10 @@ export default function InsightsPage() {
                     .map((a) => (
                       <tr key={a.account_id}>
                         <td className="py-2.5 font-medium text-gray-900">{a.account_name}</td>
-                        <td className="py-2.5 text-right text-gray-700">{formatCurrency(a.end_balance_gbp)}</td>
-                        <td className="py-2.5 text-right text-blue-600">{formatCurrency(a.total_contributions_gbp)}</td>
+                        <td className="py-2.5 text-right text-gray-700">{mask(formatCurrency(a.end_balance_gbp))}</td>
+                        <td className="py-2.5 text-right text-blue-600">{mask(formatCurrency(a.total_contributions_gbp))}</td>
                         <td className={`py-2.5 text-right font-medium ${a.total_growth_gbp >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                          {a.total_growth_gbp >= 0 ? '+' : ''}{formatCurrency(a.total_growth_gbp)}
+                          {a.total_growth_gbp >= 0 ? '+' : ''}{mask(formatCurrency(a.total_growth_gbp))}
                         </td>
                         <td className={`py-2.5 text-right font-semibold ${a.annualised_return >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                           {formatPercent(a.annualised_return)}

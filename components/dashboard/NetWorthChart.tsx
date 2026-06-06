@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
+import { useDisplayCurrency } from '@/lib/display-currency';
 
 interface DataPoint {
   date: string;
@@ -22,6 +23,7 @@ const CustomTooltip = ({ active, payload, label }: {
   payload?: Array<{ value: number }>;
   label?: number;
 }) => {
+  const { mask } = useDisplayCurrency();
   if (!active || !payload?.length || !label) return null;
   return (
     <div
@@ -38,13 +40,15 @@ const CustomTooltip = ({ active, payload, label }: {
         {format(new Date(label), 'MMMM yyyy')}
       </p>
       <p className="text-[15px] font-bold" style={{ color: '#1C1C1E' }}>
-        {formatCurrency(payload[0].value)}
+        {mask(formatCurrency(payload[0].value))}
       </p>
     </div>
   );
 };
 
 export default function NetWorthChart({ data }: { data: DataPoint[] }) {
+  const { privacyMode } = useDisplayCurrency();
+
   // Convert to numeric timestamps so Recharts spaces points by real elapsed time
   const points = data.map((d) => ({
     ts: parseISO(d.date).getTime(),
@@ -80,11 +84,11 @@ export default function NetWorthChart({ data }: { data: DataPoint[] }) {
           tickCount={6}
         />
         <YAxis
-          tickFormatter={(v) => formatCurrency(v, 'GBP', true)}
+          tickFormatter={(v) => privacyMode ? '' : formatCurrency(v, 'GBP', true)}
           tick={{ fontSize: 10, fill: '#8E8E93' }}
           tickLine={false}
           axisLine={false}
-          width={58}
+          width={privacyMode ? 12 : 58}
           domain={[min - padding, max + padding]}
         />
         <Tooltip content={<CustomTooltip />} />

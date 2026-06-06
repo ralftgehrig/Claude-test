@@ -8,7 +8,7 @@ import AssetBreakdown from '@/components/dashboard/AssetBreakdown';
 import { computeNetWorth } from '@/lib/calculations/net-worth';
 import { formatCurrency, formatPercent, formatDate, ageFromDob } from '@/lib/utils';
 import { MEMBER_COLORS } from '@/lib/types';
-import { useDisplayCurrency, fxFormat } from '@/lib/display-currency';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import type { Account, BalanceSnapshot, FamilyMember, NetWorthSnapshot } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -38,9 +38,8 @@ export default function DashboardPage() {
   const changePct = prev && change ? change / prev : null;
 
   const memberMap = Object.fromEntries(members.map((m) => [m.id, m]));
-  const { currency: displayCurrency, rates, setCurrency, loading: fxLoading } = useDisplayCurrency();
+  const { currency: displayCurrency, rates, setCurrency, loading: fxLoading, fmt, mask } = useDisplayCurrency();
   const isGBP = displayCurrency === 'GBP';
-  const fmt = (v: number, compact = false) => fxFormat(v, displayCurrency, rates, compact);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -76,7 +75,7 @@ export default function DashboardPage() {
               {fxLoading && <span className="text-lg opacity-50 ml-2">…</span>}
             </p>
             {!isGBP && netWorth && (
-              <p className="text-sm text-primary-300 mt-0.5">{formatCurrency(netWorth.total_gbp)} GBP</p>
+              <p className="text-sm text-primary-300 mt-0.5">{mask(formatCurrency(netWorth.total_gbp))} GBP</p>
             )}
           </div>
           {change !== null && changePct !== null && (
@@ -203,12 +202,12 @@ export default function DashboardPage() {
                   <div className="text-right flex-shrink-0">
                     <p className={`text-sm font-semibold ${account.is_liability ? 'text-red-500' : 'text-gray-900'}`}>
                       {snap
-                        ? `${account.is_liability ? '−' : ''}${formatCurrency(snap.gbp_balance)}`
+                        ? `${account.is_liability ? '−' : ''}${mask(formatCurrency(snap.gbp_balance))}`
                         : <span className="text-gray-300">No data</span>}
                     </p>
                     {snap && snap.currency !== 'GBP' && (
                       <p className="text-xs text-gray-400">
-                        {formatCurrency(snap.balance, snap.currency)}
+                        {mask(formatCurrency(snap.balance, snap.currency))}
                       </p>
                     )}
                   </div>

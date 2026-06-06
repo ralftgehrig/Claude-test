@@ -10,6 +10,8 @@ import {
   Lightbulb,
   Settings,
   LogOut,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -28,7 +30,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currency, setCurrency, displayCurrencies } = useDisplayCurrency();
+  const { currency, setCurrency, displayCurrencies, privacyMode, togglePrivacy } = useDisplayCurrency();
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -85,9 +87,25 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Currency switcher */}
+      {/* Currency switcher + privacy toggle */}
       <div className="px-4 py-3" style={{ borderTop: '0.5px solid rgba(60,60,67,0.12)' }}>
-        <p className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#8E8E93' }}>Display currency</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#8E8E93' }}>Display currency</p>
+          <button
+            onClick={togglePrivacy}
+            title={privacyMode ? 'Show amounts' : 'Hide amounts for demo'}
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
+            style={
+              privacyMode
+                ? { background: 'rgba(255,59,48,0.12)', color: '#FF3B30' }
+                : { background: 'rgba(118,118,128,0.12)', color: '#8E8E93' }
+            }
+          >
+            {privacyMode
+              ? <EyeOff className="w-3.5 h-3.5" strokeWidth={2} />
+              : <Eye className="w-3.5 h-3.5" strokeWidth={1.8} />}
+          </button>
+        </div>
         <div className="flex flex-wrap gap-1">
           {displayCurrencies.map((c) => (
             <button

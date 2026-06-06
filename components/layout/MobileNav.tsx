@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Lightbulb } from 'lucide-react';
+import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Lightbulb, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDisplayCurrency } from '@/lib/display-currency';
 
 const navItems = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Home' },
@@ -15,6 +16,7 @@ const navItems = [
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const { privacyMode, togglePrivacy } = useDisplayCurrency();
 
   return (
     <nav
@@ -68,6 +70,32 @@ export default function MobileNav() {
             </Link>
           );
         })}
+
+        {/* Privacy toggle */}
+        <button
+          onClick={togglePrivacy}
+          aria-label={privacyMode ? 'Show amounts' : 'Hide amounts'}
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all duration-150 active:opacity-75"
+          style={{ opacity: privacyMode ? 1 : 0.5 }}
+        >
+          <div
+            className="w-7 h-7 flex items-center justify-center rounded-xl transition-all duration-150"
+            style={privacyMode ? { background: 'rgba(255,59,48,0.12)' } : {}}
+          >
+            {privacyMode
+              ? <EyeOff className="w-[22px] h-[22px]" style={{ color: '#FF3B30' }} strokeWidth={2.2} />
+              : <Eye className="w-[22px] h-[22px]" style={{ color: '#3C3C43' }} strokeWidth={1.8} />}
+          </div>
+          <span
+            className="text-[10px] font-semibold tracking-tight"
+            style={{
+              color: privacyMode ? '#FF3B30' : '#3C3C43',
+              fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+            }}
+          >
+            {privacyMode ? 'Show' : 'Hide'}
+          </span>
+        </button>
       </div>
     </nav>
   );

@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import { runProjection } from '@/lib/calculations/projections';
 import { computeNetWorth } from '@/lib/calculations/net-worth';
 import { formatCurrency, formatPercent } from '@/lib/utils';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import { ACCOUNT_CATEGORY } from '@/lib/types';
 import type {
   Account, BalanceSnapshot, FamilyMember, Scenario,
@@ -38,6 +39,8 @@ export default function ProjectionsPage() {
   const [compareResults, setCompareResults] = useState<{ name: string; data: ProjectionResult; color: string }[]>([]);
   const [showNewScenario, setShowNewScenario] = useState(false);
   const [newScenarioName, setNewScenarioName] = useState('');
+
+  const { mask } = useDisplayCurrency();
 
   // FIRE state
   const [fireMonthlySpend, setFireMonthlySpend] = useState(4000);
@@ -205,7 +208,7 @@ export default function ProjectionsPage() {
             <div>
               <p className="text-base font-semibold text-gray-900">{selected.name}</p>
               <p className="text-xs text-gray-500">
-                {selected.assumptions.horizon_years}-year projection · {formatCurrency(portfolio.totalGBP)} today
+                {selected.assumptions.horizon_years}-year projection · {mask(formatCurrency(portfolio.totalGBP))} today
                 {selected.assumptions.simulation_type === 'monte_carlo' && ' · Monte Carlo'}
               </p>
             </div>
@@ -422,8 +425,8 @@ export default function ProjectionsPage() {
           </div>
           <div className="flex flex-col justify-end">
             <p className="label">Your FIRE number</p>
-            <p className="text-xl font-bold text-purple-700">{formatCurrency(fireNumber)}</p>
-            <p className="text-xs text-gray-400">{formatCurrency(fireMonthlySpend * 12)}/year ÷ {fireRate}%</p>
+            <p className="text-xl font-bold text-purple-700">{mask(formatCurrency(fireNumber))}</p>
+            <p className="text-xs text-gray-400">{mask(formatCurrency(fireMonthlySpend * 12))}/year ÷ {fireRate}%</p>
           </div>
         </div>
         {fireResult && (
@@ -431,12 +434,12 @@ export default function ProjectionsPage() {
             {fireResult.achieved ? (
               <div>
                 <p className="text-sm font-bold text-green-700">FIRE achieved in year {fireResult.year} — at age {fireResult.age}</p>
-                <p className="text-xs text-green-600 mt-1">Your projected net worth of {formatCurrency(fireResult.netWorth ?? 0)} exceeds your FIRE number of {formatCurrency(fireNumber)}.</p>
+                <p className="text-xs text-green-600 mt-1">Your projected net worth of {mask(formatCurrency(fireResult.netWorth ?? 0))} exceeds your FIRE number of {mask(formatCurrency(fireNumber))}.</p>
               </div>
             ) : (
               <div>
                 <p className="text-sm font-bold text-purple-700">FIRE not reached within {selected?.assumptions.horizon_years} years on this scenario</p>
-                <p className="text-xs text-purple-600 mt-1">Projected net worth in year {projResult?.data[projResult.data.length - 1]?.year}: {formatCurrency(projResult?.data[projResult.data.length - 1]?.netWorth ?? 0)} vs FIRE number: {formatCurrency(fireNumber)}. Extend the horizon or increase savings rate.</p>
+                <p className="text-xs text-purple-600 mt-1">Projected net worth in year {projResult?.data[projResult.data.length - 1]?.year}: {mask(formatCurrency(projResult?.data[projResult.data.length - 1]?.netWorth ?? 0))} vs FIRE number: {mask(formatCurrency(fireNumber))}. Extend the horizon or increase savings rate.</p>
                 <div className="mt-2 h-2 bg-purple-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-purple-500 rounded-full transition-all"
@@ -525,19 +528,19 @@ export default function ProjectionsPage() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mb-1">Current total</p>
-                  <p className="text-lg font-bold text-gray-900 mb-2">{formatCurrency(memberTotal)}</p>
+                  <p className="text-lg font-bold text-gray-900 mb-2">{mask(formatCurrency(memberTotal))}</p>
                   {projectedAt18 !== null && projectedAt18 !== undefined && (
                     <div className="bg-blue-50 rounded-lg p-3">
                       <p className="text-xs text-blue-600 font-medium">
                         Projected at age 18 (no new contributions, {((selected?.assumptions.returns.equity ?? 0.07) * 100).toFixed(0)}% equity growth)
                       </p>
-                      <p className="text-base font-bold text-blue-700">{formatCurrency(projectedAt18)}</p>
+                      <p className="text-base font-bold text-blue-700">{mask(formatCurrency(projectedAt18))}</p>
                     </div>
                   )}
                   {!isChild && memberProjection && (
                     <div className="bg-gray-50 rounded-lg p-3 mt-2">
                       <p className="text-xs text-gray-500">In 20 years (no added savings, market returns only)</p>
-                      <p className="text-base font-bold text-gray-700">{formatCurrency(memberProjection.data[19]?.netWorth ?? 0)}</p>
+                      <p className="text-base font-bold text-gray-700">{mask(formatCurrency(memberProjection.data[19]?.netWorth ?? 0))}</p>
                     </div>
                   )}
                 </div>

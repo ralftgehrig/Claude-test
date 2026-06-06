@@ -14,6 +14,7 @@ import {
   Legend,
 } from 'recharts';
 import { formatCurrency } from '@/lib/utils';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import type { ProjectionDataPoint } from '@/lib/types';
 
 interface ProjectionChartProps {
@@ -27,6 +28,7 @@ const CustomTooltip = ({ active, payload, label }: {
   payload?: Array<{ name: string; value: number; color: string }>;
   label?: string;
 }) => {
+  const { mask } = useDisplayCurrency();
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-gray-100 rounded-xl shadow-lg px-4 py-3 min-w-40">
@@ -38,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }: {
             <span className="text-xs text-gray-600">{p.name}</span>
           </div>
           <span className="text-sm font-semibold" style={{ color: p.color }}>
-            {formatCurrency(p.value)}
+            {mask(formatCurrency(p.value))}
           </span>
         </div>
       ))}
@@ -47,6 +49,10 @@ const CustomTooltip = ({ active, payload, label }: {
 };
 
 export default function ProjectionChart({ data, isMonteCarlo, compareData }: ProjectionChartProps) {
+  const { privacyMode } = useDisplayCurrency();
+  const yAxisWidth = privacyMode ? 12 : 65;
+  const yTickFormatter = (v: number) => privacyMode ? '' : formatCurrency(v, 'GBP', true);
+
   if (isMonteCarlo) {
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -59,7 +65,7 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
           <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} label={{ value: 'Years', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }} />
-          <YAxis tickFormatter={(v) => formatCurrency(v, 'GBP', true)} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={65} />
+          <YAxis tickFormatter={yTickFormatter} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={yAxisWidth} />
           <Tooltip content={<CustomTooltip />} />
           <Area type="monotone" dataKey="p90" name="90th %ile" stroke="#93c5fd" fill="url(#p90Gradient)" strokeWidth={1} dot={false} />
           <Area type="monotone" dataKey="p75" name="75th %ile" stroke="#60a5fa" fill="transparent" strokeWidth={1} dot={false} />
@@ -86,7 +92,7 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
         <LineChart data={allData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
           <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-          <YAxis tickFormatter={(v) => formatCurrency(v, 'GBP', true)} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={65} />
+          <YAxis tickFormatter={yTickFormatter} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={yAxisWidth} />
           <Tooltip content={<CustomTooltip />} />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
           <Line type="monotone" dataKey="Baseline" stroke="#3b82f6" strokeWidth={2.5} dot={false} />
@@ -109,7 +115,7 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
         <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} label={{ value: 'Years from now', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }} />
-        <YAxis tickFormatter={(v) => formatCurrency(v, 'GBP', true)} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={65} />
+        <YAxis tickFormatter={yTickFormatter} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={yAxisWidth} />
         <Tooltip content={<CustomTooltip />} />
         {/* Event reference lines */}
         {data

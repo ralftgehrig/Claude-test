@@ -11,7 +11,7 @@ import SnapshotHistoryModal from '@/components/accounts/SnapshotHistoryModal';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatDate, groupBy } from '@/lib/utils';
 import { ACCOUNT_TYPE_LABELS, CATEGORY_COLORS, ACCOUNT_CATEGORY } from '@/lib/types';
-import { useDisplayCurrency, fxFormat } from '@/lib/display-currency';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import type { Account, FamilyMember, BalanceSnapshot, AssetCategory } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -37,8 +37,7 @@ export default function AccountsPage() {
   const [viewingHistory, setViewingHistory] = useState<Account | null>(null);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
 
-  const { currency, rates } = useDisplayCurrency();
-  const fmt = (v: number) => fxFormat(v, currency, rates);
+  const { fmt, mask } = useDisplayCurrency();
 
   const byMember = groupBy(accounts, (a) => a.family_member_id);
 
@@ -205,7 +204,7 @@ export default function AccountsPage() {
                                     {account.is_liability ? '−' : ''}{fmt(snap.gbp_balance)}
                                   </p>
                                   {snap.currency !== 'GBP' && (
-                                    <p className="text-xs text-gray-400">{snap.currency} {snap.balance.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                                    <p className="text-xs text-gray-400">{snap.currency} {mask(snap.balance.toLocaleString('en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 0 }))}</p>
                                   )}
                                 </>
                               ) : (

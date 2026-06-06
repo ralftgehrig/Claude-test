@@ -9,6 +9,7 @@ import PerformancePaymentForm from '@/components/income/PerformancePaymentForm';
 import EmptyState from '@/components/ui/EmptyState';
 import { formatCurrency, formatDate, groupBy } from '@/lib/utils';
 import { INCOME_TYPE_LABELS } from '@/lib/types';
+import { useDisplayCurrency } from '@/lib/display-currency';
 import type { IncomeSource, FamilyMember, VestingEvent } from '@/lib/types';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -43,6 +44,7 @@ export default function IncomePage() {
   const [markingVest, setMarkingVest] = useState<VestingEvent | null>(null);
   const [vestActual, setVestActual] = useState({ actual_value: '', tax_withheld: '' });
 
+  const { mask } = useDisplayCurrency();
   const memberMap = Object.fromEntries(members.map((m) => [m.id, m]));
 
   // Payments grouped by income source
@@ -162,7 +164,7 @@ export default function IncomePage() {
             <p className="card-title mb-0">Upcoming vestings</p>
             {totalUpcomingVestValue > 0 && (
               <span className="badge badge-amber">
-                ~{formatCurrency(totalUpcomingVestValue, 'USD', true)} est.
+                ~{mask(formatCurrency(totalUpcomingVestValue, 'USD', true))} est.
               </span>
             )}
           </div>
@@ -193,7 +195,7 @@ export default function IncomePage() {
                   <div className="text-right flex-shrink-0">
                     {vest.total_estimated_value && (
                       <p className="text-sm font-semibold text-gray-900">
-                        ~{formatCurrency(vest.total_estimated_value, vest.currency)}
+                        ~{mask(formatCurrency(vest.total_estimated_value, vest.currency))}
                       </p>
                     )}
                     <button
@@ -250,7 +252,7 @@ export default function IncomePage() {
               {annualGBP > 0 && (
                 <div className="text-right">
                   <p className="text-xs text-gray-400">Est. annual</p>
-                  <p className="text-sm font-bold text-gray-900">{formatCurrency(annualGBP)}</p>
+                  <p className="text-sm font-bold text-gray-900">{mask(formatCurrency(annualGBP))}</p>
                 </div>
               )}
             </div>
@@ -278,7 +280,7 @@ export default function IncomePage() {
                         <p className="text-xs text-gray-400 mt-0.5">
                           {src.employer && `${src.employer} · `}
                           {src.gross_amount
-                            ? `${formatCurrency(src.gross_amount, src.currency)} ${FREQUENCY_LABELS[src.frequency ?? 'monthly']}`
+                            ? `${mask(formatCurrency(src.gross_amount, src.currency))} ${FREQUENCY_LABELS[src.frequency ?? 'monthly']}`
                             : 'See vesting schedule'}
                           {src.start_date && ` · from ${formatDate(src.start_date, 'MMM yyyy')}`}
                         </p>
@@ -295,11 +297,11 @@ export default function IncomePage() {
                                   <DollarSign className="w-3 h-3 text-gray-400 flex-shrink-0" />
                                   <span>{formatDate(p.payment_date, 'd MMM yyyy')}</span>
                                   <span className="font-medium text-gray-700">
-                                    {formatCurrency(p.actual_amount, p.currency as never)}
+                                    {mask(formatCurrency(p.actual_amount, p.currency as never))}
                                   </span>
                                   {p.target_amount && (
                                     <span className="text-gray-400">
-                                      of {formatCurrency(p.target_amount, p.currency as never)}
+                                      of {mask(formatCurrency(p.target_amount, p.currency as never))}
                                     </span>
                                   )}
                                   {pct !== null && (
@@ -407,10 +409,10 @@ export default function IncomePage() {
             {vestActual.actual_value && (
               <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2">
                 Net proceeds:{' '}
-                {formatCurrency(
+                {mask(formatCurrency(
                   parseFloat(vestActual.actual_value) - (parseFloat(vestActual.tax_withheld) || 0),
                   markingVest.currency
-                )}
+                ))}
               </p>
             )}
             <div className="flex gap-2">
