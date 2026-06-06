@@ -40,7 +40,7 @@ export default function ProjectionsPage() {
   const [showNewScenario, setShowNewScenario] = useState(false);
   const [newScenarioName, setNewScenarioName] = useState('');
 
-  const { mask } = useDisplayCurrency();
+  const { mask, privacyMode } = useDisplayCurrency();
 
   // FIRE state
   const [fireMonthlySpend, setFireMonthlySpend] = useState(4000);
@@ -225,8 +225,8 @@ export default function ProjectionsPage() {
             compareData={compareResults.map((c) => ({ name: c.name, data: c.data.data, color: c.color }))}
           />
 
-          {/* Milestones */}
-          {projResult.milestones.length > 0 && (
+          {/* Milestones — hidden in privacy mode */}
+          {!privacyMode && projResult.milestones.length > 0 && (
             <div className="mt-4 border-t border-gray-50 pt-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Wealth milestones (based on this scenario)</p>
               <div className="flex flex-wrap gap-2">

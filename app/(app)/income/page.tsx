@@ -188,7 +188,7 @@ export default function IncomePage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{src?.name}</p>
                     <p className="text-xs text-gray-500">
-                      {vest.shares.toLocaleString()} shares · {formatDate(vest.vest_date)}
+                      {mask(vest.shares.toLocaleString())} shares · {formatDate(vest.vest_date)}
                       {member && ` · ${member.name}`}
                     </p>
                   </div>
@@ -306,7 +306,7 @@ export default function IncomePage() {
                                   )}
                                   {pct !== null && (
                                     <span className={`font-medium ${pct >= 100 ? 'text-green-600' : pct >= 75 ? 'text-amber-600' : 'text-red-500'}`}>
-                                      ({pct}%)
+                                      ({mask(`${pct}%`)})
                                     </span>
                                   )}
                                 </div>
@@ -381,7 +381,7 @@ export default function IncomePage() {
         {markingVest && (
           <form onSubmit={handleMarkVested} className="space-y-4">
             <div className="bg-amber-50 rounded-xl p-3 text-sm">
-              <p className="font-medium">{markingVest.shares.toLocaleString()} shares</p>
+              <p className="font-medium">{mask(markingVest.shares.toLocaleString())} shares</p>
               <p className="text-gray-500">Vest date: {formatDate(markingVest.vest_date)}</p>
             </div>
             <div>

@@ -82,7 +82,7 @@ export default function DashboardPage() {
             <div className={`flex items-center gap-1 mb-1 text-sm font-medium ${change >= 0 ? 'text-green-300' : 'text-red-300'}`}>
               {change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
               {fmt(Math.abs(change))}
-              <span className="opacity-75">({formatPercent(Math.abs(changePct))})</span>
+              <span className="opacity-75">({mask(formatPercent(Math.abs(changePct)))})</span>
             </div>
           )}
         </div>

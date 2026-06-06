@@ -270,7 +270,7 @@ export default function InsightsPage() {
                           {a.total_growth_gbp >= 0 ? '+' : ''}{mask(formatCurrency(a.total_growth_gbp))}
                         </td>
                         <td className={`py-2.5 text-right font-semibold ${a.annualised_return >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                          {formatPercent(a.annualised_return)}
+                          {mask(formatPercent(a.annualised_return))}
                         </td>
                       </tr>
                     ))}

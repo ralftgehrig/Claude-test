@@ -77,7 +77,7 @@ export default function AssetBreakdown({ byCategory, totalGBP }: AssetBreakdownP
               {mask(formatCurrency(entry.rawValue, 'GBP', true))}
             </span>
             <span className="text-xs text-gray-400 w-12 text-right">
-              {totalGBP > 0 ? formatPercent(Math.abs(entry.rawValue) / totalGBP, 0) : '–'}
+              {totalGBP > 0 ? mask(formatPercent(Math.abs(entry.rawValue) / totalGBP, 0)) : '–'}
             </span>
           </div>
         ))}
