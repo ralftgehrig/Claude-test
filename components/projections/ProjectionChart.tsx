@@ -23,6 +23,46 @@ interface ProjectionChartProps {
   compareData?: { name: string; data: ProjectionDataPoint[]; color: string }[];
 }
 
+// Custom X-axis tick: shows calendar year on line 1, age on line 2
+const CustomXAxisTick = ({
+  x,
+  y,
+  payload,
+  ageMap,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value: number };
+  ageMap: Map<number, number>;
+}) => {
+  if (x == null || y == null || !payload) return null;
+  const calYear = new Date().getFullYear() + payload.value;
+  const age = ageMap.get(payload.value);
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        textAnchor="middle"
+        fill="#9ca3af"
+        fontSize={10}
+        dy={14}
+      >
+        {calYear}
+      </text>
+      {age != null && (
+        <text
+          textAnchor="middle"
+          fill="#bfbfbf"
+          fontSize={9}
+          dy={25}
+        >
+          {age}
+        </text>
+      )}
+    </g>
+  );
+};
+
 const CustomTooltip = ({ active, payload, label }: {
   active?: boolean;
   payload?: Array<{ name: string; value: number; color: string }>;
@@ -53,6 +93,20 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
   const yAxisWidth = privacyMode ? 12 : 65;
   const yTickFormatter = (v: number) => privacyMode ? '' : formatCurrency(v, 'GBP', true);
 
+  // Build year → age lookup from the baseline data
+  const ageMap = new Map<number, number>(data.map((d) => [d.year, d.age]));
+
+  const xAxisProps = {
+    dataKey: 'year' as const,
+    tick: (props: Record<string, unknown>) => (
+      <CustomXAxisTick {...(props as { x: number; y: number; payload: { value: number } })} ageMap={ageMap} />
+    ),
+    tickLine: false,
+    axisLine: false,
+    // extra height for the two-line tick
+    height: 44,
+  };
+
   if (isMonteCarlo) {
     return (
       <ResponsiveContainer width="100%" height={300}>
@@ -64,7 +118,7 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-          <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} label={{ value: 'Years', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }} />
+          <XAxis {...xAxisProps} />
           <YAxis tickFormatter={yTickFormatter} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={yAxisWidth} />
           <Tooltip content={<CustomTooltip />} />
           <Area type="monotone" dataKey="p90" name="90th %ile" stroke="#93c5fd" fill="url(#p90Gradient)" strokeWidth={1} dot={false} />
@@ -91,7 +145,7 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={allData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-          <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+          <XAxis {...xAxisProps} />
           <YAxis tickFormatter={yTickFormatter} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={yAxisWidth} />
           <Tooltip content={<CustomTooltip />} />
           <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
@@ -114,7 +168,7 @@ export default function ProjectionChart({ data, isMonteCarlo, compareData }: Pro
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-        <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} label={{ value: 'Years from now', position: 'insideBottom', offset: -2, fontSize: 11, fill: '#9ca3af' }} />
+        <XAxis {...xAxisProps} />
         <YAxis tickFormatter={yTickFormatter} tick={{ fontSize: 11, fill: '#9ca3af' }} tickLine={false} axisLine={false} width={yAxisWidth} />
         <Tooltip content={<CustomTooltip />} />
         {/* Event reference lines */}
